@@ -1,0 +1,219 @@
+create table type_of_dragon
+(
+    id                    serial not null
+        constraint type_of_dragon_pkey
+            primary key,
+    type                  varchar(20),
+    starling_intelligence integer,
+    speed                 integer,
+    power                 integer,
+    food_per_day          integer
+);
+
+alter table type_of_dragon
+    owner to s264484;
+
+create table flock
+(
+    id     serial not null
+        constraint flock_pkey
+            primary key,
+    leader varchar(50)
+);
+
+alter table flock
+    owner to s264484;
+
+create table dragon
+(
+    id              serial not null
+        constraint dragon_pkey
+            primary key,
+    flock_id        integer
+        constraint dragon_flock_id_fk
+            references flock,
+    type_id         integer
+        constraint dragon_type_of_dragon_id_fk
+            references type_of_dragon,
+    "intelligence " integer
+);
+
+alter table dragon
+    owner to s264484;
+
+create table stolen_dragon
+(
+    dragon_id serial not null
+        constraint stolen_dragon_pkey
+            primary key
+        constraint stolen_dragon_dragon_id_fk
+            references dragon,
+    date      timestamp
+);
+
+alter table stolen_dragon
+    owner to s264484;
+
+create table offense
+(
+    dragon_id       serial not null
+        constraint offense_pkey
+            primary key
+        constraint offense_dragon_id_fk
+            references dragon,
+    description     varchar(50),
+    type_of_offense varchar(50)
+);
+
+alter table offense
+    owner to s264484;
+
+create table foreign_land
+(
+    id                 integer not null
+        constraint foreign_land_pkey
+            primary key,
+    name               varchar(50),
+    level_of_trust     integer,
+    arms               integer,
+    money              integer,
+    count_of_soldier   integer,
+    prob_of_victory    integer,
+    declaration_of_war boolean
+);
+
+alter table foreign_land
+    owner to s264484;
+
+create table war
+(
+    foreign_land_id integer not null
+        constraint war_pkey
+            primary key
+        constraint war_foreign_land_id_fk
+            references foreign_land,
+    result          varchar(50)
+);
+
+alter table war
+    owner to s264484;
+
+create table city
+(
+    id        serial not null
+        constraint city_pkey
+            primary key,
+    name      varchar(50),
+    food      integer,
+    money     integer,
+    materials integer,
+    idea      integer
+);
+
+alter table city
+    owner to s264484;
+
+create table supply
+(
+    foreign_land_id   integer not null
+        constraint supply_pkey
+            primary key
+        constraint supply_foreign_land_id_fk
+            references foreign_land,
+    city_id           integer
+        constraint supply_city_id_fk
+            references city,
+    is_received       boolean,
+    type_of_resource  varchar(50),
+    count_of_resource integer
+);
+
+alter table supply
+    owner to s264484;
+
+create table profession
+(
+    id   serial not null
+        constraint profession_pkey
+            primary key,
+    name varchar(50)
+);
+
+alter table profession
+    owner to s264484;
+
+create table citizen
+(
+    id            serial not null
+        constraint citizen_pkey
+            primary key,
+    dragon_id     integer
+        constraint citizen_dragon_id_fk
+            references dragon,
+    social_group  varchar(50),
+    profession_id integer
+        constraint citizen_profession_id_fk
+            references profession
+);
+
+alter table citizen
+    owner to s264484;
+
+create table agent
+(
+    citizen_id     integer not null
+        constraint agent_pkey
+            primary key
+        constraint agent_citizen_id_fk
+            references citizen,
+    foreign_lan_id integer
+        constraint agent_foreign_land_id_fk
+            references foreign_land
+);
+
+alter table agent
+    owner to s264484;
+
+create table elections
+(
+    id         serial not null
+        constraint elections_pkey
+            primary key,
+    citizen_id integer
+        constraint elections_citizen_id_fk
+            references citizen,
+    city_id    integer
+        constraint elections_city_id_fk
+            references city,
+    percent    integer
+);
+
+alter table elections
+    owner to s264484;
+
+create table city_statistic
+(
+    city_id       integer   not null
+        constraint city_statistic_city_id_fk
+            references city,
+    day           timestamp not null,
+    food_inc      integer,
+    food_dec      integer,
+    food_now      integer,
+    materials_inc integer,
+    materials_dec integer,
+    materials_now integer,
+    money_inc     integer,
+    money_dec     integer,
+    money_now     integer,
+    arms_inc      integer,
+    arms_dec      integer,
+    arms_now      integer,
+    idea_now      integer,
+    constraint city_statistic_pkey
+        primary key (city_id, day)
+);
+
+alter table city_statistic
+    owner to s264484;
+
