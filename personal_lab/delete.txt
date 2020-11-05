@@ -1,0 +1,34 @@
+drop sequence character_id_seq cascade;
+
+drop sequence confirmation_id_seq cascade;
+
+drop sequence confirmation_in_conversation_id_seq cascade;
+
+drop sequence conversation_id_seq cascade;
+
+drop sequence guess_id_seq cascade;
+
+drop sequence guess_in_conversation_id_seq cascade;
+
+drop sequence topic_id_seq cascade;
+
+drop sequence character_in_conversation_id_seq cascade;
+
+drop table character_in_conversation cascade;
+
+drop table confirmation_in_conversation cascade;
+
+drop table confirmation cascade;
+
+drop table guess_in_conversation cascade;
+
+drop table guess cascade;
+
+drop table topic cascade;
+
+drop table character cascade;
+
+drop table conversation cascade;
+
+
+

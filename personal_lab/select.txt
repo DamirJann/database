@@ -1,0 +1,19 @@
+CREATE VIEW lastDateDjizirakConversation  AS(
+  SELECT max(date) FROM conversation
+  RIGHT JOIN character_in_conversation  on conversation.id = character_in_conversation.conversation_id
+  LEFT JOIN Character ON s264484.Character.id = character_in_conversation.character_id
+  WHERE name = 'Джизирак'
+);
+
+
+SELECT DISTINCT  topic.name FROM Topic
+ RIGHT JOIN Confirmation ON topic.id = confirmation.topic_id
+ RIGHT JOIN confirmation_in_conversation as confConv ON
+                                   confConv.confirmation_id = confirmation.id
+ LEFT JOIN Character ON s264484.Character.id = confConv.character_id
+ WHERE (conFConv.conversation_id in
+          (SELECT conversation.id FROM character_in_conversation
+          LEFT JOIN conversation on character_in_conversation.conversation_id = conversation.id
+          LEFT JOIN s264484.character on character.id = character_in_conversation.character_id
+          WHERE Conversation.date in (SELECT * FROM lastDateDjizirakConversation ) and character.name = 'Джизирак'))
+;

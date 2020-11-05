@@ -1,0 +1,190 @@
+INSERT INTO s264484.character ("name") VALUES ('Венечка');
+INSERT INTO s264484.character ("name") VALUES ('Лёвушка');
+INSERT INTO s264484.character ("name") VALUES ('Тоня');
+INSERT INTO s264484.character ("name") VALUES ('Джизирак');
+
+
+INSERT INTO s264484.topic ("name") VALUES ('искусство');
+INSERT INTO s264484.topic ("name") VALUES ('математика');
+INSERT INTO s264484.topic ("name")VALUES ('эмоции');
+INSERT INTO s264484.topic ("name") VALUES ('любовь');
+INSERT INTO s264484.topic ("name") VALUES ('программирование');
+
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                           VALUES ('Наши представления об идеальном партнёре содержат противоречия', 1, 4);
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                           VALUES ('Наши представления об идеальном партнёре содержат противоречия', 2, 4);
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                            VALUES ('Не нужно проглатывать негативные эмоции', 1, 3);
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                            VALUES ('диагональ клетки в тетраде меньше чем сторона!', 3, 2);
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                            VALUES ('диагональ клетки в тетраде меньше чем сторона!', 2, 2);
+
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                            VALUES ('класс на 2000 строк - странная идея', 3, 5);
+
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                            VALUES ('класс на 2000 строк - странная идея', 1, 5);
+
+
+
+
+INSERT INTO s264484.guess (description, character_id, topic_id)
+                        VALUES ('искусство может быть любым!', 1, 1);
+
+
+
+INSERT INTO s264484.confirmation (description, character_id, topic_id, guess_id)
+VALUES ('Когда я думаю об том самой, то представляю её обольститильницой и вместе с тем весьма скромной и тихой', 1, 4, 1);
+
+INSERT INTO s264484.confirmation (description, character_id, topic_id, guess_id)
+VALUES ('Когда я думаю об том самой, то представляю её обольститильницой и вместе с тем весьма скромной и тихой', 2, 4, 2);
+
+INSERT INTO s264484.confirmation (description, character_id, topic_id, guess_id)
+VALUES ('Monster object - антипаттерн', 3, 5, 7);
+
+
+INSERT INTO s264484.confirmation (description, character_id, topic_id, guess_id)
+VALUES ('Двадцатый век с авангардом показал, что нет никаких границ в форме и идеи', 1, 1, 8);
+
+INSERT INTO s264484.confirmation (description, character_id, topic_id, guess_id)
+VALUES ('Monster object - антипаттерн', 3, 2, 4);
+
+
+
+INSERT INTO conversation (date) VALUES  ('2020-01-08 04:00:00');
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (1, 1);
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (2, 1);
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (3, 1);
+
+INSERT INTO conversation (date) VALUES  ('2021-01-08 04:00:00');
+INSERT INTO conversation (date) VALUES  ('2022-01-08 04:00:00');
+INSERT INTO conversation (date) VALUES  ('2023-01-08 04:00:00');
+INSERT INTO conversation (date) VALUES  ('2024-01-08 04:00:00');
+
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (1, 1);
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (2, 1);
+
+-- добавляем венечку и джизирак в разговоры
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (1, 3);
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (4, 3);
+
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (2, 4);
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (4, 4);
+
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (3, 5);
+INSERT INTO s264484.character_in_conversation (character_id, conversation_id) VALUES  (4, 5);
+
+-- добавляем догадкиДЖИЗИРАКА в последний разговор
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+            VALUES  (5, 4, 1, '2024-01-08 04:02:06');
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (5, 4, 3, '2024-01-08 04:02:06');
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (5, 4, 4, '2024-01-08 04:02:06');
+
+-- добавляем догадки НЕ ДЖИЗИРАКА В РАЗГОВО
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (5, 3, 4, '2024-01-08 04:02:06');
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (5, 3, 5, '2024-01-08 04:02:06');
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (5, 3, 3, '2024-01-08 04:02:06');
+-- добавляем разгадки НЕ ДЖИЗИРАКА В РАЗГОВО
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES  (5, 3, 1, '2024-01-08 04:02:06');
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES  (5, 3, 2, '2024-01-08 04:02:06');
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES  (5, 3, 3, '2024-01-08 04:02:06');
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES  (5, 3, 4, '2024-01-08 04:02:06');
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES  (5, 3, 5, '2024-01-08 04:02:06');
+
+
+
+
+
+
+
+
+
+
+
+
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (1, 1, 1, '2020-01-08 04:02:06');
+
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (1, 1, 8, '2020-01-08 04:05:06');
+
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (1, 2, 5, '2020-01-08 04:12:06');
+
+
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (1, 3, 6, '2020-01-08 07:02:06');
+
+
+INSERT INTO guess_in_conversation (conversation_id, character_id, guess_id, time)
+VALUES  (1, 2, 3, '2020-01-08 07:20:06');
+
+
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES (1, 1, 1, '2020-01-08 07:25:06');
+
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES (1, 2, 2, '2020-01-08 07:45:06');
+
+
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES (1, 3, 3, '2020-01-08 07:26:06');
+
+
+INSERT INTO confirmation_in_conversation (conversation_id, character_id, confirmation_id, time)
+VALUES (1, 1, 4, '2020-01-08 07:35:06');
+
+
+
+SELECT name FROM character_in_conversation
+    LEFT JOIN s264484.character ON character_in_conversation.character_id = character.id
+    WHERE conversation_id = 1;
+
+SELECT name, description, time FROM (SELECT description,time, guess.character_id FROM guess_in_conversation
+                                     LEFT JOIN guess On guess_in_conversation.guess_id = guess.id
+                                     WHERE conversation_id = 1) AS SUB
+        RIGHT JOIN s264484.character ON s264484.character.id = SUB.character_id
+        ORDER BY time;
+
+
+
+SELECT name, description, time FROM (SELECT description, time, confirmation.character_id FROM confirmation_in_conversation
+                                    LEFT JOIN confirmation On confirmation_in_conversation.confirmation_id = confirmation.id
+                                    WHERE conversation_id = 1) AS SUB
+        RIGHT JOIN s264484.character ON s264484.character.id = SUB.character_id
+        ORDER BY time;
+
+
+
+SELECT  guess_id, confirmation_id
+FROM guess_in_conversation
+    LEfT JOIN confirmation_in_conversation
+    ON guess_in_conversation.guess_id =(SELECT guess_id
+                                        FROM confirmation
+                                        WHERE confirmation_in_conversation.confirmation_id = id)

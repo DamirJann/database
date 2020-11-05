@@ -1,0 +1,163 @@
+create sequence character_id_seq;
+
+alter sequence character_id_seq owner to s264484;
+create sequence confirmation_id_seq;
+
+alter sequence confirmation_id_seq owner to s264484;
+
+create sequence confirmation_in_conversation_id_seq;
+
+alter sequence confirmation_in_conversation_id_seq owner to s264484;
+
+create sequence conversation_id_seq;
+
+alter sequence conversation_id_seq owner to s264484;
+
+create sequence guess_id_seq;
+
+alter sequence guess_id_seq owner to s264484;
+
+create sequence guess_in_conversation_id_seq;
+
+alter sequence guess_in_conversation_id_seq owner to s264484;
+
+create sequence topic_id_seq;
+
+alter sequence topic_id_seq owner to s264484;
+
+create sequence character_in_conversation_id_seq;
+
+alter sequence character_in_conversation_id_seq owner to s264484;
+
+create table topic
+(
+    id   integer default nextval('topic_id_seq'::regclass) not null
+        constraint topic_pkey
+            primary key,
+    name varchar(300)                                      not null
+        constraint topic_name_key
+            unique
+);
+
+alter table topic
+    owner to s264484;
+
+create table character
+(
+    id   integer default nextval('character_id_seq'::regclass) not null
+        constraint character_pkey
+            primary key,
+    name varchar(50)                                           not null
+);
+
+alter table character
+    owner to s264484;
+
+create table guess
+(
+    id           integer default nextval('guess_id_seq'::regclass) not null
+        constraint guess_pkey
+            primary key,
+    description  varchar(300)                                      not null,
+    character_id integer
+        constraint guess_character_fk
+            references character,
+    topic_id     integer
+        constraint guess_topic_fk
+            references topic
+);
+
+alter table guess
+    owner to s264484;
+
+create table confirmation
+(
+    id           integer default nextval('confirmation_id_seq'::regclass) not null
+        constraint confirmation_pkey
+            primary key,
+    description  varchar(300)                                             not null,
+    character_id integer
+        constraint confirmation_character_fk
+            references character,
+    topic_id     integer
+        constraint confirmation_topic_fk
+            references topic,
+    guess_id     integer
+        constraint confirmation_guess_fk
+            references guess
+);
+
+alter table confirmation
+    owner to s264484;
+
+create table conversation
+(
+    id   integer default nextval('conversation_id_seq'::regclass) not null
+        constraint conversation_pkey
+            primary key,
+    date timestamp
+);
+
+alter table conversation
+    owner to s264484;
+
+create table character_in_conversation
+(
+    id              integer default nextval('character_in_conversation_id_seq'::regclass) not null
+        constraint character_in_conversation_pkey
+            primary key,
+    character_id    integer
+        constraint character_in_conversation_character_fk
+            references character,
+    conversation_id integer
+        constraint character_in_conversation_conversation_fk
+            references conversation
+);
+
+alter table character_in_conversation
+    owner to s264484;
+
+create table confirmation_in_conversation
+(
+    id              integer default nextval('confirmation_in_conversation_id_seq'::regclass) not null
+        constraint confirmation_in_conversation_pkey
+            primary key,
+    conversation_id integer
+        constraint confirmation_in_conversation_conversation_fk
+            references conversation,
+    character_id    integer
+        constraint confirmation_in_conversation_character_fk
+            references character,
+    confirmation_id integer
+        constraint confirmation_in_conversation_confirmation_fk
+            references confirmation,
+    time            timestamp
+);
+
+alter table confirmation_in_conversation
+    owner to s264484;
+
+create table guess_in_conversation
+(
+    id              integer default nextval('guess_in_conversation_id_seq'::regclass) not null
+        constraint guess_in_conversation_pkey
+            primary key,
+    conversation_id integer
+        constraint guess_in_conversation_conversation_fk
+            references conversation,
+    character_id    integer
+        constraint guess_in_conversation_character_fk
+            references character,
+    guess_id        integer
+        constraint guess_in_conversation_guess_fk
+            references guess,
+    time            timestamp
+);
+
+alter table guess_in_conversation
+    owner to s264484;
+
+
+
+
+
