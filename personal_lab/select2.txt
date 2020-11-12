@@ -1,0 +1,16 @@
+SELECT topic.name FROM topic
+RIGHT JOIN confirmation on topic.id = confirmation.topic_id
+RIGHT JOIN confirmation_in_conversation as cic on cic.confirmation_id = confirmation.id
+LEFT JOIN conversation ON cic.conversation_id = conversation.id
+RIGHT JOIN (SELECT max(date) as maxdate FROM character
+           RIGHT JOIN character_in_conversation ON character.id = character_in_conversation.character_id
+           RIGHT JOIN conversation ON conversation.id = character_in_conversation.conversation_id
+           GROUP BY name
+           HAVING name = 'Джизирак'
+           )  as sub
+      ON sub.maxdate = conversation.date
+LEFT JOIN character ON character.id = cic.character_id
+WHERE character.name != 'Джизирак'
+
+
+Во вложенном запросе выбыраются последние разговор ДЖИЗИРАКА
