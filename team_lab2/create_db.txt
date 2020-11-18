@@ -1,4 +1,4 @@
-create table type_of_dragon
+create table dragon_type
 (
     id                    serial not null
         constraint type_of_dragon_pkey
@@ -10,15 +10,16 @@ create table type_of_dragon
     food_per_day          integer
 );
 
-alter table type_of_dragon
+alter table dragon_type
     owner to s264484;
 
 create table flock
 (
-    id     serial not null
+    id         serial not null
         constraint flock_pkey
             primary key,
-    leader varchar(50)
+    leader_id  varchar(50),
+    teacher_id integer
 );
 
 alter table flock
@@ -34,24 +35,11 @@ create table dragon
             references flock,
     type_id         integer
         constraint dragon_type_of_dragon_id_fk
-            references type_of_dragon,
+            references dragon_type,
     "intelligence " integer
 );
 
 alter table dragon
-    owner to s264484;
-
-create table stolen_dragon
-(
-    dragon_id serial not null
-        constraint stolen_dragon_pkey
-            primary key
-        constraint stolen_dragon_dragon_id_fk
-            references dragon,
-    date      timestamp
-);
-
-alter table stolen_dragon
     owner to s264484;
 
 create table offense
@@ -61,38 +49,58 @@ create table offense
             primary key
         constraint offense_dragon_id_fk
             references dragon,
-    description     varchar(50),
-    type_of_offense varchar(50)
+    type            varchar(50),
+    date            date,
+    injured_land_id integer
 );
 
 alter table offense
     owner to s264484;
 
-create table foreign_land
+create table land
 (
-    id                 integer not null
+    id             integer not null
         constraint foreign_land_pkey
             primary key,
-    name               varchar(50),
-    level_of_trust     integer,
-    arms               integer,
-    money              integer,
-    count_of_soldier   integer,
-    prob_of_victory    integer,
-    declaration_of_war boolean
+    name           varchar(50),
+    level_of_trust integer,
+    arms           integer,
+    money          integer,
+    soldier_count  integer,
+    is_mirtial_low integer,
+    idea           integer,
+    dragon_count   integer
 );
 
-alter table foreign_land
+alter table land
+    owner to s264484;
+
+create table stolen_dragon
+(
+    dragon_id     serial not null
+        constraint stolen_dragon_pkey
+            primary key
+        constraint stolen_dragon_dragon_id_fk
+            references dragon,
+    date          timestamp,
+    thief_land_id integer
+        constraint stolen_dragon_land_id_fk
+            references land
+);
+
+alter table stolen_dragon
     owner to s264484;
 
 create table war
 (
-    foreign_land_id integer not null
+    id                 integer not null
         constraint war_pkey
-            primary key
-        constraint war_foreign_land_id_fk
-            references foreign_land,
-    result          varchar(50)
+            primary key,
+    name               varchar(50),
+    description        varchar(50),
+    start_date         date,
+    finish_date        integer,
+    result_description integer
 );
 
 alter table war
@@ -107,7 +115,11 @@ create table city
     food      integer,
     money     integer,
     materials integer,
-    idea      integer
+    idea      integer,
+    arms      integer,
+    land_id   integer
+        constraint city_land_id_fk
+            references land
 );
 
 alter table city
@@ -115,17 +127,16 @@ alter table city
 
 create table supply
 (
-    foreign_land_id   integer not null
+    id             integer not null
         constraint supply_pkey
-            primary key
-        constraint supply_foreign_land_id_fk
-            references foreign_land,
-    city_id           integer
-        constraint supply_city_id_fk
-            references city,
-    is_received       boolean,
-    type_of_resource  varchar(50),
-    count_of_resource integer
+            primary key,
+    supplier_id    integer
+        constraint supply_land_id_fk
+            references land,
+    client_id      boolean,
+    resource_type  varchar(50),
+    resource_count integer,
+    date           date
 );
 
 alter table supply
@@ -144,48 +155,41 @@ alter table profession
 
 create table citizen
 (
-    id            serial not null
+    id                    serial not null
         constraint citizen_pkey
             primary key,
-    dragon_id     integer
+    dragon_id             integer
         constraint citizen_dragon_id_fk
             references dragon,
-    social_group  varchar(50),
-    profession_id integer
+    social_group          varchar(50),
+    current_profession_id integer
         constraint citizen_profession_id_fk
-            references profession
+            references profession,
+    city_id               integer
+        constraint citizen_city_id_fk
+            references city
 );
 
 alter table citizen
     owner to s264484;
 
-create table agent
-(
-    citizen_id     integer not null
-        constraint agent_pkey
-            primary key
-        constraint agent_citizen_id_fk
-            references citizen,
-    foreign_lan_id integer
-        constraint agent_foreign_land_id_fk
-            references foreign_land
-);
-
-alter table agent
-    owner to s264484;
+alter table flock
+    add constraint flock_citizen_id_fk
+        foreign key (teacher_id) references citizen;
 
 create table elections
 (
-    id         serial not null
+    id            serial not null
         constraint elections_pkey
             primary key,
-    citizen_id integer
+    candidate_id  integer
         constraint elections_citizen_id_fk
             references citizen,
-    city_id    integer
-        constraint elections_city_id_fk
-            references city,
-    percent    integer
+    land_id       integer
+        constraint elections_land_id_fk
+            references land,
+    votes_percent integer,
+    date          date
 );
 
 alter table elections
@@ -193,10 +197,10 @@ alter table elections
 
 create table city_statistic
 (
-    city_id       integer   not null
+    city_id       integer not null
         constraint city_statistic_city_id_fk
             references city,
-    day           timestamp not null,
+    date          date    not null,
     food_inc      integer,
     food_dec      integer,
     food_now      integer,
@@ -209,11 +213,224 @@ create table city_statistic
     arms_inc      integer,
     arms_dec      integer,
     arms_now      integer,
-    idea_now      integer,
     constraint city_statistic_pkey
-        primary key (city_id, day)
+        primary key (city_id, date)
 );
 
 alter table city_statistic
+    owner to s264484;
+
+create table battle
+(
+    id                 integer not null
+        constraint battle_pk
+            primary key,
+    war_id             integer not null
+        constraint battle_war_id_fk
+            references war,
+    name               varchar(50),
+    start_date         date,
+    finish_date        date,
+    result_description varchar(50),
+    place_description  varchar(50)
+);
+
+alter table battle
+    owner to s264484;
+
+create table "union"
+(
+    id            integer not null
+        constraint union_pk
+            primary key,
+    "varchar(50)" integer,
+    start_date    integer,
+    finish_date   integer
+);
+
+alter table "union"
+    owner to s264484;
+
+create table land_in_war
+(
+    war_id    integer
+        constraint land_in_war_war_id_fk
+            references war,
+    land_id   integer
+        constraint land_in_war_land_id_fk
+            references land,
+    is_winner integer,
+    union_id  integer
+        constraint land_in_war_union_id_fk
+            references "union",
+    constraint land_in_war_pk
+        unique (war_id, land_id)
+);
+
+alter table land_in_war
+    owner to s264484;
+
+create table land_in_union
+(
+    union_id integer not null
+        constraint land_in_union_union_id_fk
+            references "union",
+    land_id  integer not null
+        constraint land_in_union_land_id_fk
+            references land,
+    constraint land_in_union_pk
+        primary key (union_id, land_id)
+);
+
+alter table land_in_union
+    owner to s264484;
+
+create table trust_relationship_report
+(
+    id                 integer not null
+        constraint trust_relationship_report_pk
+            primary key,
+    from_which_land_id integer
+        constraint trust_relationship_report_foreign_land_id_fk
+            references land,
+    reviewed_land_id   integer
+        constraint trust_relationship_report_foreign_land_id_fk_2
+            references land,
+    trust_percent      integer
+);
+
+alter table trust_relationship_report
+    owner to s264484;
+
+create unique index trust_relationship_report_id_uindex
+    on trust_relationship_report (id);
+
+create table participant_in_battle
+(
+    battle_id      integer not null
+        constraint participant_in_battle_battle_id_fk
+            references battle,
+    land_id        integer not null
+        constraint participant_in_battle_land_id_fk
+            references land,
+    is_winner      boolean,
+    dragon_count   integer,
+    soldier_ccount integer,
+    constraint participant_in_battle_battle_land_pk
+        primary key (battle_id, land_id),
+    constraint participant_in_battle_pk
+        unique (battle_id, land_id)
+);
+
+alter table participant_in_battle
+    owner to s264484;
+
+create table resource_report
+(
+    id            integer not null
+        constraint resource_report_pk
+            primary key,
+    soldier_count integer,
+    money         integer,
+    arms          integer,
+    dragon_count  integer,
+    idea          integer
+);
+
+alter table resource_report
+    owner to s264484;
+
+create table agent_in_trip
+(
+    citizen_id         integer not null
+        constraint agent_pkey
+            primary key
+        constraint agent_citizen_id_fk
+            references citizen,
+    land_id            integer
+        constraint agent_in_trip_land_id_fk
+            references land,
+    start_date         date,
+    finish_date        date,
+    resource_report_id integer
+        constraint agent_in_trip_resource_report_id_fk
+            references resource_report,
+    trust_report_id    integer
+        constraint agent_in_trip_trust_relationship_report_id_fk
+            references trust_relationship_report
+);
+
+alter table agent_in_trip
+    owner to s264484;
+
+create unique index resource_report_id_uindex
+    on resource_report (id);
+
+create table stolen_resource
+(
+    injured_land_id integer
+        constraint stolen_resource_land_id_fk
+            references land,
+    thief_land_id   integer
+        constraint stolen_resource_land_id_fk_2
+            references land,
+    resource_type   integer,
+    resource_count  integer,
+    date            integer,
+    constraint stolen_resource_pk
+        unique (injured_land_id, thief_land_id, date)
+);
+
+alter table stolen_resource
+    owner to s264484;
+
+create table combat_unit
+(
+    land_id          integer
+        constraint combat_unit_land_id_fk
+            references land,
+    soldier_id       integer not null
+        constraint combat_unit_citizen_id_fk
+            references citizen,
+    combat_dragon_id integer not null
+        constraint combat_unit_dragon_id_fk
+            references dragon,
+    constraint combat_unit_pk
+        primary key (soldier_id, combat_dragon_id)
+);
+
+alter table combat_unit
+    owner to s264484;
+
+create table poll
+(
+    literate_id integer not null
+        constraint poll_pk
+            primary key
+        constraint poll_citizen_id_fk
+            references citizen,
+    date        date,
+    idea        integer
+);
+
+alter table poll
+    owner to s264484;
+
+create unique index poll_literate_id_uindex
+    on poll (literate_id);
+
+create table citizen_profession
+(
+    citizen_id    integer not null
+        constraint citizen_profession_citizen_id_fk
+            references citizen,
+    profession_id integer not null
+        constraint citizen_profession_profession_id_fk
+            references profession,
+    constraint citizen_profession_pk
+        primary key (citizen_id, profession_id)
+);
+
+alter table citizen_profession
     owner to s264484;
 
