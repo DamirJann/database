@@ -1,0 +1,61 @@
+alter table flock
+    drop constraint flock_teacher_id_cnstr;
+
+alter table flock
+    drop constraint flock_leader_id_cnstr;
+
+drop table offense;
+
+drop table stolen_dragon;
+
+drop table combat_unit_in_battle;
+
+drop table supply;
+
+drop table city_statistic;
+
+drop table elections;
+
+drop table land_in_war;
+
+drop table land_in_union;
+
+drop table "union";
+
+drop table participant_in_battle;
+
+drop table battle;
+
+drop table war;
+
+drop table agent_in_trip;
+
+drop table trust_relationship_report;
+
+drop table resource_report;
+
+drop table stolen_resource;
+
+drop table combat_unit;
+
+drop table poll;
+
+drop table citizen_profession;
+
+drop table citizen;
+
+drop table dragon;
+
+drop table dragon_type;
+
+drop table flock;
+
+drop table city;
+
+drop table land;
+
+drop table profession;
+
+drop type resource_type_enum;
+
+drop type social_group_enum;

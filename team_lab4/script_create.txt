@@ -1,0 +1,567 @@
+create table dragon_type
+(
+    id  serial primary key,
+    type                  varchar(20) NOT NULL ,
+    starting_intelligence integer  NOT NULL,
+    speed                 integer  NOT NULL ,
+    power                 integer  NOT NULL ,
+    food_per_day          integer  NOT NULL
+
+        constraint positive_cnstr
+            check ( starting_intelligence >= 0 and
+                    speed > 0 and
+                    power > 0  and
+                    food_per_day >= 0)
+);
+
+create table flock
+(
+    id serial primary key ,
+    leader_id  integer not null ,
+    teacher_id integer
+);
+
+
+create table dragon
+(
+    id           serial primary key,
+    flock_id     integer,
+    type_id      integer not null ,
+    intelligence integer not null ,
+    land_id      integer ,
+    constraint positive_cnstr
+        check ( intelligence > 0)
+);
+
+
+create table offense
+(
+    dragon_id integer,
+    type      varchar(50) NOT NULL,
+    date      date NOT NULL ,
+    injured_land_id integer not null
+);
+
+alter table offense add primary key (date, injured_land_id);
+
+create table land
+(
+    id     serial  primary key,
+    name           varchar(50) NOT NULL ,
+    arms           integer NOT NULL ,
+    money          integer NOT NULL ,
+    soldier_count  integer NOT NULL ,
+    is_mirtial_low boolean default false,
+    idea           integer NOT NULL ,
+    dragon_count   integer NOT NULL,
+    constraint positive_cnstr
+        check ( arms >= 0 and
+                soldier_count >= 0 and
+                idea >= 0 and
+                dragon_count >= 0 and
+                money >= 0
+            ),
+    constraint percent_cnstr
+            check ( 0 <= idea and idea <= 100)
+);
+
+create table stolen_dragon
+(
+    dragon_id  integer not null ,
+    date       date NOT NULL ,
+    thief_land_id integer
+
+);
+
+alter table stolen_dragon add PRIMARY KEY (dragon_id, date);
+
+
+create table war
+(
+    id serial primary key,
+    name               varchar(50) NOT NULL ,
+    description        varchar(100),
+    start_date         date NOT NULL ,
+    finish_date        date,
+    result_description varchar(100)
+        constraint date_cnstr check (finish_date IS NULL or
+                                     (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+create table city
+(
+    id        serial primary key ,
+    name      varchar(50) not null,
+    food      integer not null ,
+    money     integer not null ,
+    materials integer not null ,
+    idea      integer not null ,
+    arms      integer not null ,
+    land_id   integer not null ,
+    constraint positive_cnstr
+        check ( food >= 0 and
+                arms >= 0 and
+                materials >= 0 and
+                money >= 0
+            ),
+    constraint percent_cnstr
+        check ( 0 <= idea and idea <= 100)
+);
+
+create type resource_type_enum as enum ('food', 'material', 'arms', 'money');
+
+create table supply
+(
+    id             serial primary key,
+    supplier_id    integer not null ,
+    client_id      integer not null ,
+    resource_type  resource_type_enum NOT NULL,
+    resource_count integer NOT NULL ,
+    date           date NOT NULL
+        constraint positive_cnstr
+            check ( resource_count >= 0)
+
+);
+
+create table profession
+(
+    id   serial primary key,
+    name varchar(50) NOT NULL
+
+);
+
+create type social_group_enum as enum ('jarl', 'konungr', 'karl');
+
+create table citizen
+(
+    id                    serial primary key,
+    dragon_id             integer unique ,
+    social_group          social_group_enum NOT NULL,
+    current_profession_id integer,
+    city_id               integer not null
+
+);
+
+create table city_statistic
+(
+    city_id       integer not null ,
+    date          date    not null,
+    food_inc      integer not null,
+    food_dec      integer not null,
+    food_now      integer not null,
+    materials_inc integer not null,
+    materials_dec integer not null,
+    materials_now integer not null,
+    money_inc     integer not null,
+    money_dec     integer not null,
+    money_now     integer not null,
+    arms_inc      integer not null,
+    arms_dec      integer not null,
+    arms_now      integer not null,
+    constraint positive_cnstr
+        check(
+                    food_inc >= 0 and
+                    food_dec >= 0 and
+                    food_now >= 0 and
+                    materials_inc >= 0 and
+                    materials_dec >= 0 and
+                    materials_now >= 0 and
+                    arms_inc >= 0 and
+                    arms_dec >= 0 and
+                    arms_now >= 0
+            )
+);
+
+
+alter table city_statistic add primary key (city_id, date);
+
+create table elections
+(
+    id   serial primary key,
+    candidate_id  integer not null ,
+    land_id       integer not null ,
+    votes_percent float not null ,
+    date          date not null
+        constraint percent_cnstr
+            check ( 0 <= votes_percent and votes_percent <= 100)
+
+);
+
+
+create table battle
+(
+    id      serial primary key,
+    war_id         integer not null ,
+    name               varchar(50) not null,
+    start_date         date not null ,
+    finish_date        date,
+    result_description varchar(50),
+    place_description  varchar(50)
+
+        constraint date_cnstr check (finish_date IS NULL or
+                                     (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+
+create table "union"
+(
+    id   serial primary key,
+    name   varchar(50) not null ,
+    start_date    date not null,
+    finish_date   date
+        constraint date_cnstr check (finish_date IS NULL or
+                                     (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+create table land_in_war
+(
+    war_id    integer not null ,
+    land_id   integer not null ,
+    is_winner boolean,
+    union_id  integer
+);
+alter table land_in_war add primary key  (war_id, land_id);
+
+create table land_in_union
+(
+    union_id integer not null ,
+    land_id  integer not null
+);
+alter table land_in_union add primary key (union_id, land_id);
+
+create table trust_relationship_report
+(
+    id  serial primary key,
+    from_which_land_id integer not null ,
+    reviewed_land_id   integer not null ,
+    trust_percent      integer not null,
+    constraint percent_cnstr
+        check ( 0 <= trust_percent and trust_percent <= 100)
+);
+
+create table participant_in_battle
+(
+    battle_id integer not null ,
+    land_id integer not null ,
+    is_winner      boolean,
+    dragon_count   integer not null ,
+    soldier_count integer not null,
+    constraint positive_cnstr
+        check(
+                    dragon_count >= 0 and
+                    soldier_count >= 0
+            )
+);
+
+alter table participant_in_battle add primary key (battle_id, land_id);
+
+create table resource_report
+(
+    id serial primary key ,
+    soldier_count integer,
+    money         integer,
+    arms          integer,
+    dragon_count  integer,
+    idea          integer,
+    constraint positive_cnstr
+        check(
+                    soldier_count >= 0 and
+                    money >= 0 and
+                    arms >= 0 and
+                    dragon_count >= 0
+            ),
+    constraint percent_cnstr
+        check ( 0 <= idea and idea <= 100)
+);
+
+create table agent_in_trip
+(
+    citizen_id integer not null ,
+    land_id integer not null ,
+    start_date date not null ,
+    finish_date date ,
+    resource_report_id integer,
+    trust_report_id integer,
+    constraint date_cnstr check (finish_date IS NULL or
+                                 (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+alter table agent_in_trip add primary key (citizen_id);
+
+create table stolen_resource
+(
+    injured_land_id integer not null ,
+    thief_land_id   integer not null ,
+    resource_type   resource_type_enum not null ,
+    resource_count  integer not null ,
+    date            date not null
+);
+
+alter table stolen_resource add primary key (injured_land_id, thief_land_id, date);
+
+create table combat_unit
+(
+    id serial primary key ,
+    land_id integer not null ,
+    soldier_id integer,
+    combat_dragon_id integer
+);
+
+create table poll
+(
+    literate_id integer not null ,
+    date date not null ,
+    idea integer not null,
+    constraint percent_cnstr
+        check ( 0 <= idea and idea <= 100)
+
+);
+
+alter table poll add primary key (literate_id);
+
+create table citizen_profession
+(
+    citizen_id integer not null ,
+    profession_id integer not null
+);
+
+alter table citizen_profession add primary key (citizen_id, profession_id);
+
+create table combat_unit_in_battle
+(
+    combat_unit_id integer not null ,
+    battle_id integer not null
+);
+
+alter table combat_unit_in_battle add primary key (combat_unit_id, battle_id);
+-- внешние ключи
+
+ALTER TABLE combat_unit_in_battle
+    ADD CONSTRAINT mortal_unit_in_battle_combat_unit_id_cnstr
+        FOREIGN KEY (combat_unit_id)
+            REFERENCES combat_unit(id);
+
+ALTER TABLE combat_unit_in_battle
+    ADD CONSTRAINT mortal_unit_in_battle_battle_id_cnstr
+        FOREIGN KEY (battle_id)
+            REFERENCES battle(id);
+
+ALTER TABLE land_in_war
+    ADD CONSTRAINT land_in_war_war_id_cnstr
+        FOREIGN KEY (war_id)
+            REFERENCES war(id);
+
+ALTER TABLE land_in_war
+    ADD CONSTRAINT land_in_war_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+ALTER TABLE land_in_war
+    ADD CONSTRAINT land_in_war_union_id_cnstr
+        FOREIGN KEY (union_id)
+            REFERENCES "union"(id);
+
+
+ALTER TABLE land_in_union
+    ADD CONSTRAINT land_in_union_union_id_cnstr
+        FOREIGN KEY (union_id)
+            REFERENCES "union"(id);
+
+
+ALTER TABLE land_in_union
+    ADD CONSTRAINT land_in_union_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+
+
+ALTER TABLE stolen_dragon
+    ADD CONSTRAINT stolen_dragon_dragon_id_cnstr
+        FOREIGN KEY (dragon_id)
+            REFERENCES dragon(id);
+
+
+ALTER TABLE stolen_dragon
+    ADD CONSTRAINT stolen_dragon_thief_land_id_cnstr
+        FOREIGN KEY (thief_land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE combat_unit
+    ADD CONSTRAINT combat_unit_combat_dragon_id_cnstr
+        FOREIGN KEY (combat_dragon_id)
+            REFERENCES dragon(id);
+
+ALTER TABLE combat_unit
+    ADD CONSTRAINT combat_unit_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE combat_unit
+    ADD CONSTRAINT combat_unit_soldier_id_cnstr
+        FOREIGN KEY (soldier_id)
+            REFERENCES citizen(id);
+
+
+ALTER TABLE offense
+    ADD CONSTRAINT combat_unit_dragon_id_cnstr
+        FOREIGN KEY (dragon_id)
+            REFERENCES dragon(id);
+
+ALTER TABLE offense
+    ADD CONSTRAINT combat_unit_injured_land_id_cnstr
+        FOREIGN KEY (injured_land_id)
+            REFERENCES land(id);
+
+ALTER TABLE dragon
+    ADD CONSTRAINT dragon_flock_id_cnstr
+        FOREIGN KEY (flock_id)
+            REFERENCES flock(id);
+
+ALTER TABLE dragon
+    ADD CONSTRAINT dragon_type_id_cnstr
+        FOREIGN KEY (type_id)
+            REFERENCES dragon_type(id);
+
+ALTER TABLE dragon
+    ADD CONSTRAINT dragon_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+ALTER TABLE citizen_profession
+    ADD CONSTRAINT citizen_profession_citizen_id_cnstr
+        FOREIGN KEY (citizen_id)
+            REFERENCES citizen(id);
+
+ALTER TABLE citizen_profession
+    ADD CONSTRAINT citizen_profession_profession_id_cnstr
+        FOREIGN KEY (profession_id)
+            REFERENCES profession(id);
+
+
+ALTER TABLE flock
+    ADD CONSTRAINT flock_teacher_id_cnstr
+        FOREIGN KEY (teacher_id)
+            REFERENCES citizen(id);
+
+ALTER TABLE flock
+    ADD CONSTRAINT flock_leader_id_cnstr
+        FOREIGN KEY (leader_id)
+            REFERENCES dragon(id);
+
+
+ALTER TABLE poll
+    ADD CONSTRAINT poll_literate_id_cnstr
+        FOREIGN KEY (literate_id)
+            REFERENCES citizen(id);
+
+ALTER TABLE citizen
+    ADD CONSTRAINT citizen_dragon_id_cnstr
+        FOREIGN KEY (dragon_id)
+            REFERENCES dragon(id);
+
+ALTER TABLE citizen
+    ADD CONSTRAINT citizen_city_id_cnstr
+        FOREIGN KEY (city_id)
+            REFERENCES city(id);
+
+ALTER TABLE citizen
+    ADD CONSTRAINT citizen_profession_id_cnstr
+        FOREIGN KEY (current_profession_id)
+            REFERENCES profession(id);
+
+ALTER TABLE elections
+    ADD CONSTRAINT elections_candidate_id_cnstr
+        FOREIGN KEY (candidate_id)
+            REFERENCES citizen(id);
+
+
+ALTER TABLE elections
+    ADD CONSTRAINT elections_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_citizen_id_cnstr
+        FOREIGN KEY (citizen_id)
+            REFERENCES citizen(id);
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_resource_id_cnstr
+        FOREIGN KEY (resource_report_id)
+            REFERENCES resource_report(id);
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_trust_report_id_cnstr
+        FOREIGN KEY (trust_report_id)
+            REFERENCES trust_relationship_report(id);
+
+
+ALTER TABLE city
+    ADD CONSTRAINT city_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE stolen_resource
+    ADD CONSTRAINT stolen_resource_injured_land_id_cnstr
+        FOREIGN KEY (injured_land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE stolen_resource
+    ADD CONSTRAINT stolen_resource_thief_land_id_cnstr
+        FOREIGN KEY (thief_land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE stolen_resource
+    ADD CONSTRAINT stolen_resource__id_cnstr
+        FOREIGN KEY (thief_land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE trust_relationship_report
+    ADD CONSTRAINT trust_relationship_report_from_which_land_id_cnstr
+        FOREIGN KEY (from_which_land_id)
+            REFERENCES land(id);
+
+ALTER TABLE trust_relationship_report
+    ADD CONSTRAINT trust_relationship_report_reviewed_land_id_cnstr
+        FOREIGN KEY (reviewed_land_id)
+            REFERENCES land(id);
+
+
+ALTER TABLE supply
+    ADD CONSTRAINT supply_supplier_id_cnstr
+        FOREIGN KEY (supplier_id)
+            REFERENCES land(id);
+
+ALTER TABLE supply
+    ADD CONSTRAINT supply_cliend_id_cnstr
+        FOREIGN KEY (client_id)
+            REFERENCES land(id);
+
+ALTER TABLE participant_in_battle
+    ADD CONSTRAINT participant_in_battle_battle_id_cnstr
+        FOREIGN KEY (battle_id)
+            REFERENCES battle(id);
+
+ALTER TABLE participant_in_battle
+    ADD CONSTRAINT participant_in_battle_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id);
+
+ALTER TABLE battle
+    ADD CONSTRAINT battle_war_id_cnstr
+        FOREIGN KEY (war_id)
+            REFERENCES war(id);

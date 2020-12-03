@@ -1,0 +1,67 @@
+alter table flock
+    drop constraint flock_teacher_id_cnstr;
+
+alter table flock
+    drop constraint flock_leader_id_cnstr;
+
+delete from offense;
+
+delete from stolen_dragon;
+
+delete from combat_unit_in_battle;
+
+delete from supply;
+
+delete from city_statistic;
+
+delete from elections;
+
+delete from land_in_war;
+
+delete from land_in_union;
+
+delete from "union";
+
+delete from participant_in_battle;
+
+delete from battle;
+
+delete from war;
+
+delete from agent_in_trip;
+
+delete from trust_relationship_report;
+
+delete from resource_report;
+
+delete from stolen_resource;
+
+delete from combat_unit;
+
+delete from poll;
+
+delete from citizen_profession;
+
+delete from citizen;
+
+delete from dragon;
+
+delete from flock;
+
+delete from dragon_type;
+
+delete from city;
+
+delete from land;
+
+delete from profession;
+
+ALTER TABLE flock
+    ADD CONSTRAINT flock_teacher_id_cnstr
+        FOREIGN KEY (teacher_id)
+            REFERENCES citizen(id);
+
+ALTER TABLE flock
+    ADD CONSTRAINT flock_leader_id_cnstr
+        FOREIGN KEY (leader_id)
+            REFERENCES dragon(id);
