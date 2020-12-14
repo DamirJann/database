@@ -1,0 +1,554 @@
+create table dragon_type
+(
+    id  serial primary key,
+    type                  varchar(20) NOT NULL ,
+    starting_intelligence integer  NOT NULL,
+    speed                 integer  NOT NULL ,
+    power                 integer  NOT NULL ,
+    food_per_day          integer  NOT NULL
+
+        constraint positive_cnstr
+            check ( starting_intelligence >= 0 and
+                    speed > 0 and
+                    power > 0  and
+                    food_per_day >= 0)
+);
+
+create table flock
+(
+    id serial primary key ,
+    leader_id  integer not null unique ,
+    teacher_id integer
+);
+
+create table dragon
+(
+    id           serial primary key,
+    flock_id     integer,
+    type_id      integer not null ,
+    intelligence integer not null ,
+    land_id      integer ,
+    constraint positive_cnstr
+        check ( intelligence > 0)
+);
+
+create table offense
+(
+    dragon_id integer,
+    type      varchar(50) NOT NULL,
+    date      date NOT NULL ,
+    injured_land_id integer not null
+);
+
+alter table offense add primary key (date, injured_land_id);
+
+create table land
+(
+    id     serial  primary key,
+    name           varchar(50) not null ,
+    money     integer default 0,
+    materials integer default 0,
+    idea      integer default 0,
+    arms      integer default 0,
+    soldier_count integer default 0,
+    dragon_count integer default 0,
+    is_mirtial_low boolean default false,
+    constraint positive_cnstr
+        check ( (arms is null or arms >= 0) and
+                (materials is null or materials >= 0) and
+                (money is null or money >= 0) and
+                (soldier_count is null or soldier_count >= 0) and
+                (dragon_count is null or dragon_count >= 0)
+            ),
+    constraint percent_cnstr
+        check ( idea is null or (0 <= idea and idea <= 100))
+);
+
+create table stolen_dragon
+(
+    dragon_id  integer not null ,
+    date       date NOT NULL ,
+    thief_land_id integer
+
+);
+
+alter table stolen_dragon add PRIMARY KEY (dragon_id, date);
+
+create table war
+(
+    id serial primary key,
+    name               varchar(50) NOT NULL ,
+    description        varchar(100),
+    start_date         date NOT NULL ,
+    finish_date        date,
+    result_description varchar(100)
+        constraint date_cnstr check (finish_date IS NULL or
+                                     (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+create table city
+(
+    id        serial primary key ,
+    name      varchar(50) not null,
+    food      integer default 0,
+    money     integer default 0,
+    materials integer default 0,
+    idea      integer default 0,
+    arms      integer default 0,
+    soldier_count integer default 0,
+    land_id   integer not null ,
+    constraint positive_cnstr
+        check ( (food is null or food >= 0) and
+                (arms is null or arms >= 0) and
+                (materials is null or materials >= 0) and
+                (money is null or money >= 0) and
+                (soldier_count is null or soldier_count >= 0)
+            ),
+    constraint percent_cnstr
+        check ( idea is null or (0 <= idea and idea <= 100))
+);
+
+create type resource_type_enum as enum ('food', 'material', 'arms', 'money');
+
+create table supply
+(
+    id             serial primary key,
+    supplier_id    integer not null ,
+    client_id      integer not null ,
+    resource_type  resource_type_enum NOT NULL,
+    resource_count integer NOT NULL ,
+    date           date NOT NULL
+        constraint positive_cnstr
+            check ( resource_count >= 0)
+
+);
+
+create table profession
+(
+    id   serial primary key,
+    name varchar(50) NOT NULL
+
+);
+
+create type social_group_enum as enum ('jarl', 'konungr', 'karl');
+
+create table citizen
+(
+    id                    serial primary key,
+    dragon_id             integer unique ,
+    social_group          social_group_enum NOT NULL,
+    current_profession_id integer,
+    city_id               integer not null,
+    birth_date            date not null,
+    death_date            date,
+    constraint date_cnstr check (death_date IS NULL or
+                                (death_date > birth_date and death_date IS NOT NULL))
+);
+
+---точно ли должно быть not null
+create table city_statistic
+(
+    city_id       integer not null ,
+    date          date    not null,
+    food_inc      integer not null default 0,
+    food_dec      integer not null default 0,
+    materials_inc integer not null default 0,
+    materials_dec integer not null default 0,
+    money_inc     integer not null default 0,
+    money_dec     integer not null default 0,
+    arms_inc      integer not null default 0,
+    arms_dec      integer not null default 0,
+    constraint positive_cnstr
+        check(
+                    food_inc >= 0 and
+                    food_dec >= 0 and
+                    materials_inc >= 0 and
+                    materials_dec >= 0 and
+                    arms_inc >= 0 and
+                    arms_dec >= 0 and
+                    money_inc >= 0 and
+                    money_dec >= 0
+            )
+);
+
+alter table city_statistic add primary key (city_id, date);
+
+create table election
+(
+    candidate_id  integer not null ,
+    land_id       integer not null ,
+    votes_percent float not null ,
+    date          date not null
+        constraint percent_cnstr
+            check ( 0 <= votes_percent and votes_percent <= 100)
+
+);
+
+alter table election add primary key (date, candidate_id);
+
+create table battle
+(
+    id      serial primary key,
+    war_id         integer not null ,
+    name               varchar(50) not null,
+    start_date         date not null ,
+    finish_date        date,
+    result_description varchar(50),
+    place_description  varchar(50)
+
+        constraint date_cnstr check (finish_date IS NULL or
+                                     (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+create table "union"
+(
+    id   serial primary key,
+    name   varchar(50) not null ,
+    start_date    date not null,
+    finish_date   date
+        constraint date_cnstr check (finish_date IS NULL or
+                                     (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+create table land_in_war
+(
+    war_id    integer not null ,
+    land_id   integer not null ,
+    is_winner boolean,
+    union_id  integer
+);
+
+alter table land_in_war add primary key  (war_id, land_id);
+
+create table land_in_union
+(
+    union_id integer not null ,
+    land_id  integer not null
+);
+
+alter table land_in_union add primary key (union_id, land_id);
+
+create table trust_relationship_report
+(
+    id  serial primary key,
+    from_which_land_id integer not null ,
+    reviewed_land_id   integer not null ,
+    trust_percent      integer not null,
+    constraint percent_cnstr
+        check ( 0 <= trust_percent and trust_percent <= 100)
+);
+
+create table participant_in_battle
+(
+    battle_id integer not null ,
+    land_id integer not null ,
+    is_winner      boolean,
+    dragon_count   integer not null ,
+    soldier_count integer not null,
+    constraint positive_cnstr
+        check(
+                    dragon_count >= 0 and
+                    soldier_count >= 0
+            )
+);
+
+alter table participant_in_battle add primary key (battle_id, land_id);
+
+create type  type_of_indicator_enum as enum ('food', 'material', 'arms', 'money',
+    'soldier count', 'dragon count', 'idea');
+
+create table resource_report
+(
+    id serial primary key ,
+    resource_type type_of_indicator_enum not null ,
+    resource_count integer not null ,
+    constraint positive_cnstr
+        check(
+                resource_count >= 0
+            ),
+    constraint percent_cnstr
+        check (
+                        resource_type = 'idea' and resource_count<=100 or resource_type <> 'idea'
+            )
+);
+
+create table agent_in_trip
+(
+    citizen_id integer not null ,
+    city_id integer not null ,
+    start_date date not null ,
+    finish_date date ,
+    resource_report_id integer,
+    trust_report_id integer,
+    constraint date_cnstr check (finish_date IS NULL or
+                                 (finish_date > start_date and finish_date IS NOT NULL))
+);
+
+alter table agent_in_trip add primary key (citizen_id, start_date);
+
+create table stolen_resource
+(
+    injured_city_id integer not null ,
+    thief_city_id   integer,
+    resource_type   resource_type_enum not null ,
+    resource_count  integer not null ,
+    date            date not null
+);
+
+alter table stolen_resource add primary key (injured_city_id, date);
+
+create table combat_unit
+(
+    id serial primary key ,
+    land_id integer not null ,
+    soldier_id integer,
+    combat_dragon_id integer
+);
+
+create table poll
+(
+    literate_id integer not null ,
+    date date not null ,
+    idea integer not null,
+    city_id integer not null,
+    constraint percent_cnstr
+        check ( 0 <= idea and idea <= 100)
+
+);
+
+alter table poll add primary key (city_id, date);
+
+create table citizen_profession
+(
+    citizen_id integer not null ,
+    profession_id integer not null
+);
+
+alter table citizen_profession add primary key (citizen_id, profession_id);
+
+create table combat_unit_in_battle
+(
+    combat_unit_id integer not null ,
+    battle_id integer not null
+);
+
+alter table combat_unit_in_battle add primary key (combat_unit_id, battle_id);
+
+-- ---------------------
+-- внешние ключи
+-- ---------------------
+
+ALTER TABLE combat_unit_in_battle
+    ADD CONSTRAINT mortal_unit_in_battle_combat_unit_id_cnstr
+        FOREIGN KEY (combat_unit_id)
+            REFERENCES combat_unit(id) ON DELETE CASCADE;
+
+ALTER TABLE combat_unit_in_battle
+    ADD CONSTRAINT mortal_unit_in_battle_battle_id_cnstr
+        FOREIGN KEY (battle_id)
+            REFERENCES battle(id) ON DELETE CASCADE;
+
+ALTER TABLE land_in_war
+    ADD CONSTRAINT land_in_war_war_id_cnstr
+        FOREIGN KEY (war_id)
+            REFERENCES war(id) ON DELETE CASCADE;
+
+ALTER TABLE land_in_war
+    ADD CONSTRAINT land_in_war_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE CASCADE;
+
+ALTER TABLE land_in_war
+    ADD CONSTRAINT land_in_war_union_id_cnstr
+        FOREIGN KEY (union_id)
+            REFERENCES "union"(id) ON DELETE SET NULL;
+
+ALTER TABLE land_in_union
+    ADD CONSTRAINT land_in_union_union_id_cnstr
+        FOREIGN KEY (union_id)
+            REFERENCES "union"(id) ON DELETE CASCADE;
+
+ALTER TABLE land_in_union
+    ADD CONSTRAINT land_in_union_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE CASCADE;
+
+ALTER TABLE stolen_dragon
+    ADD CONSTRAINT stolen_dragon_dragon_id_cnstr
+        FOREIGN KEY (dragon_id)
+            REFERENCES dragon(id) ON DELETE CASCADE;
+
+ALTER TABLE stolen_dragon
+    ADD CONSTRAINT stolen_dragon_thief_land_id_cnstr
+        FOREIGN KEY (thief_land_id)
+            REFERENCES land(id) ON DELETE SET NULL;
+
+ALTER TABLE combat_unit
+    ADD CONSTRAINT combat_unit_combat_dragon_id_cnstr
+        FOREIGN KEY (combat_dragon_id)
+            REFERENCES dragon(id) ON DELETE SET NULL;
+
+ALTER TABLE combat_unit
+    ADD CONSTRAINT combat_unit_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE CASCADE;
+
+ALTER TABLE combat_unit
+    ADD CONSTRAINT combat_unit_soldier_id_cnstr
+        FOREIGN KEY (soldier_id)
+            REFERENCES citizen(id) ON DELETE SET NULL;
+
+ALTER TABLE offense
+    ADD CONSTRAINT combat_unit_dragon_id_cnstr
+        FOREIGN KEY (dragon_id)
+            REFERENCES dragon(id) ON DELETE SET NULL;
+
+ALTER TABLE offense
+    ADD CONSTRAINT combat_unit_injured_land_id_cnstr
+        FOREIGN KEY (injured_land_id)
+            REFERENCES land(id) ON DELETE CASCADE;
+
+ALTER TABLE dragon
+    ADD CONSTRAINT dragon_flock_id_cnstr
+        FOREIGN KEY (flock_id)
+            REFERENCES flock(id) ON DELETE SET NULL;
+
+ALTER TABLE dragon
+    ADD CONSTRAINT dragon_type_id_cnstr
+        FOREIGN KEY (type_id)
+            REFERENCES dragon_type(id) ON DELETE CASCADE;
+
+ALTER TABLE dragon
+    ADD CONSTRAINT dragon_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE SET NULL;
+
+ALTER TABLE citizen_profession
+    ADD CONSTRAINT citizen_profession_citizen_id_cnstr
+        FOREIGN KEY (citizen_id)
+            REFERENCES citizen(id) ON DELETE CASCADE ;
+
+ALTER TABLE citizen_profession
+    ADD CONSTRAINT citizen_profession_profession_id_cnstr
+        FOREIGN KEY (profession_id)
+            REFERENCES profession(id) ON DELETE CASCADE ;
+
+ALTER TABLE flock
+    ADD CONSTRAINT flock_teacher_id_cnstr
+        FOREIGN KEY (teacher_id)
+            REFERENCES citizen(id) ON DELETE SET NULL ;
+
+ALTER TABLE flock
+    ADD CONSTRAINT flock_leader_id_cnstr
+        FOREIGN KEY (leader_id)
+            REFERENCES dragon(id) ON DELETE CASCADE ;
+
+ALTER TABLE poll
+    ADD CONSTRAINT poll_literate_id_cnstr
+        FOREIGN KEY (literate_id)
+            REFERENCES citizen(id) ON DELETE set null ;
+
+ALTER TABLE poll
+    ADD CONSTRAINT poll_city_id_cnstr
+        FOREIGN KEY (city_id)
+            REFERENCES city(id) ON DELETE CASCADE ;
+
+ALTER TABLE citizen
+    ADD CONSTRAINT citizen_dragon_id_cnstr
+        FOREIGN KEY (dragon_id)
+            REFERENCES dragon(id) ON DELETE SET NULL ;
+
+ALTER TABLE citizen
+    ADD CONSTRAINT citizen_city_id_cnstr
+        FOREIGN KEY (city_id)
+            REFERENCES city(id) ON DELETE CASCADE;
+
+ALTER TABLE citizen
+    ADD CONSTRAINT citizen_profession_id_cnstr
+        FOREIGN KEY (current_profession_id)
+            REFERENCES profession(id) ON DELETE SET NULL ;
+
+ALTER TABLE election
+    ADD CONSTRAINT elections_candidate_id_cnstr
+        FOREIGN KEY (candidate_id)
+            REFERENCES citizen(id) ON DELETE CASCADE ;
+
+ALTER TABLE election
+    ADD CONSTRAINT elections_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE CASCADE ;
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_citizen_id_cnstr
+        FOREIGN KEY (citizen_id)
+            REFERENCES citizen(id) ON DELETE CASCADE ;
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_city_id_cnstr
+        FOREIGN KEY (city_id)
+            REFERENCES city(id) ON DELETE CASCADE ;
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_resource_id_cnstr
+        FOREIGN KEY (resource_report_id)
+            REFERENCES resource_report(id) ON DELETE SET NULL ;
+
+ALTER TABLE agent_in_trip
+    ADD CONSTRAINT agent_in_trip_trust_report_id_cnstr
+        FOREIGN KEY (trust_report_id)
+            REFERENCES trust_relationship_report(id) ON DELETE SET NULL;
+
+ALTER TABLE city
+    ADD CONSTRAINT city_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE CASCADE ;
+
+ALTER TABLE stolen_resource
+    ADD CONSTRAINT stolen_resource_injured_land_id_cnstr
+        FOREIGN KEY (injured_city_id)
+            REFERENCES city(id) ON DELETE CASCADE ;
+
+ALTER TABLE stolen_resource
+    ADD CONSTRAINT stolen_resource_thief_land_id_cnstr
+        FOREIGN KEY (thief_city_id)
+            REFERENCES city(id) ON DELETE SET NULL ;
+
+ALTER TABLE trust_relationship_report
+    ADD CONSTRAINT trust_relationship_report_from_which_land_id_cnstr
+        FOREIGN KEY (from_which_land_id)
+            REFERENCES land(id) ON DELETE CASCADE ;
+
+ALTER TABLE trust_relationship_report
+    ADD CONSTRAINT trust_relationship_report_reviewed_land_id_cnstr
+        FOREIGN KEY (reviewed_land_id)
+            REFERENCES land(id) ON DELETE  CASCADE;
+
+ALTER TABLE supply
+    ADD CONSTRAINT supply_supplier_id_cnstr
+        FOREIGN KEY (supplier_id)
+            REFERENCES city(id) ON DELETE CASCADE ;
+
+ALTER TABLE supply
+    ADD CONSTRAINT supply_cliend_id_cnstr
+        FOREIGN KEY (client_id)
+            REFERENCES city(id) ON DELETE CASCADE ;
+
+ALTER TABLE participant_in_battle
+    ADD CONSTRAINT participant_in_battle_battle_id_cnstr
+        FOREIGN KEY (battle_id)
+            REFERENCES battle(id) ON DELETE  CASCADE ;
+
+ALTER TABLE participant_in_battle
+    ADD CONSTRAINT participant_in_battle_land_id_cnstr
+        FOREIGN KEY (land_id)
+            REFERENCES land(id) ON DELETE CASCADE ;
+
+ALTER TABLE battle
+    ADD CONSTRAINT battle_war_id_cnstr
+        FOREIGN KEY (war_id)
+            REFERENCES war(id) ON DELETE CASCADE ;
+
+ALTER TABLE city_statistic
+    ADD CONSTRAINT city_statistic_city_id_cnstr
+        FOREIGN KEY (city_id)
+            REFERENCES city(id) ON DELETE CASCADE ;

@@ -1,0 +1,642 @@
+-- при изменении количества ресурсов dec и inc в city_statistic должны изменяться данные в city
+-- не проверено
+create or replace function update_city_statistic()
+    returns trigger as
+$$
+declare
+    city_food      integer;
+    city_materials integer;
+    city_money     integer;
+    city_arms      integer;
+begin
+    ---при insert вставляются новые данные, при update вставляются новые и удаляются старые, при delete удаляются старые
+    if (tg_op = 'INSERT' or tg_op = 'UPDATE') then
+        select food into city_food from city where city.id = new.city_id;
+        select materials into city_materials from city where city.id = new.city_id;
+        select money into city_money from city where city.id = new.city_id;
+        select arms into city_arms from city where city.id = new.city_id;
+        city_food = city_food - new.food_dec + new.food_inc;
+        city_materials = city_materials - new.materials_dec + new.materials_inc;
+        city_money = city_money - new.money_dec + new.money_inc;
+        city_arms = city_arms - new.arms_dec + new.arms_inc;
+        update city
+        set food      = city_food,
+            money     = city_money,
+            materials = city_materials,
+            arms      = city_arms
+        where city.id = new.city_id;
+    end if;
+    if (tg_op = 'UPDATE' or tg_op = 'DELETE') then
+        select food into city_food from city where city.id = old.city_id;
+        select materials into city_materials from city where city.id = old.city_id;
+        select money into city_money from city where city.id = old.city_id;
+        select arms into city_arms from city where city.id = old.city_id;
+        city_food = city_food + old.food_dec - old.food_inc;
+        city_materials = city_materials + old.materials_dec - old.materials_inc;
+        city_money = city_money + old.money_dec - old.money_inc;
+        city_arms = city_arms + old.arms_dec - old.arms_inc;
+        update city
+        set food      = city_food,
+            money     = city_money,
+            materials = city_materials,
+            arms      = city_arms
+        where city.id = old.city_id;
+        return old;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_delete_city_stat_tg
+    before insert or delete or update
+    on city_statistic
+    for each row
+execute procedure update_city_statistic();
+
+---------------------------------------------------------------------------------
+-- при добавлении\изменении\удалении жителей, количество войнов может меняться
+-- если профессия не записана в citizen_profession, добавляем ее туда
+create or replace function update_citizen_stat()
+    returns trigger as
+$$
+declare
+    city_soldier_count integer;
+    index              integer;
+begin
+    ---считаем количество солдат по городам
+    for index in
+        select id from city
+        loop
+            select count(*) into city_soldier_count from citizen where index = city_id and current_profession_id = 3;
+            update city set soldier_count = city_soldier_count where city.id = index;
+        end loop;
+    if (tg_op = 'DELETE') then
+        return old;
+    else
+        ---если профессия не записана в citizen_profession, добавляем ее туда
+        perform * from citizen_profession where citizen_id = new.id and profession_id = new.current_profession_id;
+        if (not FOUND and new.current_profession_id is not null) then
+            insert into citizen_profession values (new.id, new.current_profession_id);
+        end if;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_delete_citizen_tg
+    after insert or update or delete
+    on citizen
+    for each row
+execute procedure update_citizen_stat();
+
+------------------------------------------------------------------------------------------------------
+--при удалении профессии из citizen_profession, если она является текущей, то у горожанина должно появиться значение null
+create or replace function update_curr_prof_id()
+    returns trigger as
+$$
+declare
+    cur_prof_id integer;
+begin
+    select current_profession_id into cur_prof_id from citizen where id = old.citizen_id;
+    if (old.profession_id = cur_prof_id) then
+        update citizen set current_profession_id = null where id = old.citizen_id;
+    end if;
+end;
+$$ language plpgsql;
+
+create trigger update_delete_citizen_profession_tg
+    after delete
+    on citizen_profession
+    for each row
+execute procedure update_curr_prof_id();
+-----------------------------------------------------------------------------------------
+-- в городе может быть только один (или ноль) ярл и в стране может быть только один конунг(или ноль)
+-- добавляем данные в combat_unit()
+create or replace function check_only_one_jarl_and_konungr()
+    returns trigger as
+$$
+declare
+    konungr_count integer;
+    jarl_count    integer;
+    index         integer;
+begin
+    if (new.social_group = 'konungr') then
+        for index in
+            ---идем по городам в этой же стране
+            select id
+            from city
+            where land_id in (
+                select land_id
+                from city
+                where id = new.city_id)
+            loop
+                select count(*) into konungr_count from citizen where social_group = 'konungr' and city_id = index;
+                if (konungr_count = 1) then
+                    raise exception 'В государстве может быть только один конунг';
+                end if;
+            end loop;
+        return new;
+    end if;
+    if (new.social_group = 'jarl') then
+        select count(*) into jarl_count from citizen where social_group = 'jarl' and new.city_id = city_id;
+        if (jarl_count = 1) then
+            raise exception 'В городе может быть только один ярл';
+        else
+            return new;
+        end if;
+    end if;
+
+
+    --     -- добавляем данные в combat_unit
+--     if (tg_op = 'INSERT' and new.current_profession_id = 3) then
+--         --если у человека есть дракон
+--         if (new.dragon_id is not null) then
+--             update combat_unit set soldier_id = new.current_profession_id where dragon_id = new.dragon_id;
+--         else
+--             insert into combat_unit (id, land_id, soldier_id, combat_dragon_id)
+--             values (default, new.)
+--         end if;
+--     end if;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_citizen_tg
+    before insert or update
+    on citizen
+    for each row
+execute procedure check_only_one_jarl_and_konungr();
+
+-----------------------------------------------------------------------------------------------
+---последний опрос должен менять веру в городе
+create or replace function update_idea_in_city(changed_city_id integer)
+    returns void as
+$$
+declare
+    last_date date;
+    last_idea integer;
+begin
+    ---можно сделать в один запрос?
+    select max(date) into last_date from poll where city_id = changed_city_id;
+    select idea into last_idea from poll where date = last_date and city_id = changed_city_id;
+    update city set idea = last_idea where city.id = changed_city_id;
+end;
+$$ language plpgsql;
+
+create or replace function update_idea()
+    returns trigger as
+$$
+begin
+    if (tg_op = 'INSERT') then
+        perform update_idea_in_city(new.city_id);
+        return new;
+    elsif (tg_op = 'UPDATE') then
+        ---если поменяли город
+        if (new.city_id <> old.city_id) then
+            perform update_idea_in_city(new.city_id);
+            perform update_idea_in_city(old.city_id);
+            ---если меняется дата или идея
+        elsif (new.date <> old.date or new.idea <> old.idea) then
+            perform update_idea_in_city(new.city_id);
+        end if;
+        return new;
+    elsif (tg_op = 'DELETE') then
+        perform update_idea_in_city(old.city_id);
+        return old;
+    end if;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_delete_poll_tg
+    after insert or update or delete
+    on poll
+    for each row
+execute procedure update_idea();
+
+-----------------------------------------------------------------------------------------
+---при добавлении стаи flock_id у лидера должен стать равным flock(id)
+---проверить получше
+create or replace function update_dragon_flock_id()
+    returns trigger as
+$$
+begin
+    update dragon
+    set flock_id = new.id
+    where new.leader_id = id;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_flock_tg
+    after insert or update
+    on flock
+    for each row
+execute procedure update_dragon_flock_id();
+
+------------------------------------------------------------------------------------------------
+---при добавлении\изменении\удалении дракона количество должно меняться в land(dragon_count)
+create or replace function update_dragon_count_in_land()
+    returns trigger as
+$$
+declare
+    land_dragon_count integer;
+    index             integer;
+begin
+    ---считаем количество драконов по странам
+    for index in
+        select id from land
+        loop
+            select count(*) into land_dragon_count from dragon where index = land_id;
+            update land set dragon_count = land_dragon_count where land.id = index;
+        end loop;
+    return new;
+end;
+$$ language plpgsql;
+
+---можно ли сделать для одного statement?
+create trigger insert_update_delete_dragon_tg
+    after insert or update or delete
+    on dragon
+    for each row
+execute procedure update_dragon_count_in_land();
+
+-------------------------------------------------------------------------------------------------
+---combat_unit может состоять из человека, дракона, или человека и дракона, при этом человек
+-- и дракон должны иметь те же land_id, что и combat_unit(land_id) и, если юнит состоит из человека и дракона,
+-- дракон должен быть связан с человеком через поле (citizen(dragon_id)
+--НЕОБХОДИМО ПРОВЕЯРТЬ ЭТО ПРИ ИЗМЕНЕНИИ ДРАКОНА ИЛИ ЧЕЛОВЕКА
+--soldier должен иметь соответствующую профессию
+create or replace function check_soldier_and_dragon_id()
+    returns trigger as
+$$
+begin
+    ---soldier должен иметь ту же land_id
+    if (new.soldier_id is not null) then
+        perform *
+        from citizen
+                 inner join city on city_id = city.id
+                 inner join citizen_profession cp on citizen.id = cp.citizen_id
+        where citizen.id = new.soldier_id
+          and land_id = new.land_id
+          and cp.profession_id = 3;
+        if not FOUND then
+            raise exception 'Citizen % has another land_id or job', new.soldier_id;
+        end if;
+    end if;
+    ---dragon должен иметь ту же land_id
+    if (new.combat_dragon_id is not null) then
+        perform * from dragon where dragon.id = new.combat_dragon_id and dragon.land_id = new.land_id;
+        if not FOUND then
+            raise exception 'Dragon has another land_id';
+        end if;
+    end if;
+    ---dragon and soldier должны быть связаны
+    if (new.combat_dragon_id is not null and new.soldier_id is not null) then
+        perform * from citizen where citizen.id = new.soldier_id and citizen.dragon_id = new.combat_dragon_id;
+        if not FOUND then
+            raise exception 'Dragon and soldier are not connected';
+        end if;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger before_insert_update_combat_unit_tg
+    before insert or update
+    on combat_unit
+    for each row
+execute procedure check_soldier_and_dragon_id();
+
+
+----------------------------------------------------------------------------------------
+-- при удалении человека или дракона, соотвестующее поле принимает значение null.
+-- Если обе строки (soldier_id and dragon_id) равны null, запись необходимо удалить
+create or replace function delete_null_row()
+    returns trigger as
+$$
+begin
+    if (new.combat_dragon_id is null and new.soldier_id is null) then
+        delete from combat_unit where new.id = combat_unit.id;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+
+create trigger after_insert_update_combat_unit_tg
+    after insert or update
+    on combat_unit
+    for each row
+execute procedure delete_null_row();
+
+-------------------------------------------------------------------------------------------------
+---при добавлении записи в stolen_dragon должен меняться dragon(land_id) на theif_land_id
+create or replace function update_dragon_land_id()
+    returns trigger as
+$$
+begin
+    update dragon set land_id = new.thief_land_id where id = new.dragon_id;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_slolen_dragon_tg
+    after insert or update
+    on stolen_dragon
+    for each row
+execute procedure update_dragon_land_id();
+--------------------------------------------------------------------------------------------
+---сумма процентов в выборах <= 100 и кандидат должен иметь ту же land_id
+create or replace function check_percent_sum()
+    returns trigger as
+$$
+declare
+    percent_sum integer;
+begin
+    perform *
+    from citizen
+             inner join city on city_id = city.id
+    where citizen.id = new.candidate_id
+      and land_id = new.land_id;
+    if not FOUND then
+        raise exception 'Кандидат - чужеземец';
+    end if;
+
+    select sum(votes_percent)
+    into percent_sum
+    from election
+    where election.date = new.date
+      and election.land_id = new.land_id;
+    percent_sum = percent_sum + new.votes_percent;
+    if (percent_sum > 100) then
+        raise exception 'Сумма процентов всех голосов в выборах больше ста';
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_election_tg
+    before insert or update
+    on election
+    for each row
+execute procedure check_percent_sum();
+-----------------------------------------------------------------------------------------------
+---при изменении ресурсов на уровне города, ресурсы должны меняться на уровне страны
+---проверить лучше
+create or replace function update_land_info()
+    returns trigger as
+$$
+declare
+    land_id_now integer;
+    land_money         integer;
+    land_materials     integer;
+    land_idea          integer;
+    land_sum_idea      integer;
+    land_count_city    integer;
+    land_arms          integer;
+    land_soldier_count integer;
+    land_index         integer;
+begin
+    if (tg_op = 'DELETE') then
+        land_id_now = old.land_id;
+    else land_id_now = new.land_id;
+    end if;
+    ---список изменившихся стран
+    for land_index in
+        select id from land where land.id = land_id_now
+        loop
+            select sum(money) into land_money from city where land_id = land_index;
+            select sum(materials) into land_materials from city where land_id = land_index;
+            select sum(idea) into land_sum_idea from city where land_id = land_index;
+            select count(idea) into land_count_city from city where land_id = land_index;
+            land_idea = land_sum_idea / land_count_city;
+            select sum(arms) into land_arms from city where land_id = land_index;
+            select sum(soldier_count) into land_soldier_count from city where land_id = land_index;
+            update land
+            set money         = land_money,
+                materials     = land_materials,
+                idea          = land_idea,
+                arms          = land_arms,
+                soldier_count = land_soldier_count
+            where land.id = land_index;
+        end loop;
+    if (tg_op = 'DELETE') then
+        return old;
+    end if;
+    return new;
+end;
+
+$$ language plpgsql;
+
+
+create trigger insert_update_delete_city_tg
+    after insert or update or delete
+    on city
+    for each row
+execute procedure update_land_info();
+--------------------------------------------------------------------------------------------------------------------
+---при совершении сделки должно меняться количество ресурсов у двух стран
+--не проверено
+create or replace function is_enough_res(supplier_id integer, client_id integer, resource_type resource_type_enum,
+                                         resource_count integer)
+    returns boolean as
+$$
+declare
+    resource_count_supplier integer;
+    resource_count_client   integer;
+begin
+    if (resource_type = 'food') then
+        select food into resource_count_supplier from city where city.id = supplier_id;
+        resource_count_supplier = resource_count_supplier - resource_count;
+        if (resource_count_supplier >= 0) then
+            update city set food = resource_count_supplier where id = supplier_id;
+            if (client_id is not null) then
+                select food into resource_count_client from city where city.id = client_id;
+                resource_count_client = resource_count_client + resource_count;
+                update city set food = resource_count_client where id = client_id;
+            end if;
+            return true;
+        end if;
+    elsif (resource_type = 'material') then
+        select materials into resource_count_supplier from city where city.id = supplier_id;
+        resource_count_supplier = resource_count_supplier - resource_count;
+        if (resource_count_supplier >= 0) then
+            update city set materials = resource_count_supplier where id = supplier_id;
+            if (client_id is not null) then
+                select materials into resource_count_client from city where city.id = client_id;
+                resource_count_client = resource_count_client + resource_count;
+                update city set materials = resource_count_client where id = client_id;
+            end if;
+            return true;
+        end if;
+    elsif (resource_type = 'arms') then
+        select arms into resource_count_supplier from city where city.id = supplier_id;
+        resource_count_supplier = resource_count_supplier - resource_count;
+        if (resource_count_supplier >= 0) then
+            update city set arms = resource_count_supplier where id = supplier_id;
+            if (client_id is not null) then
+                select arms into resource_count_client from city where city.id = client_id;
+                resource_count_client = resource_count_client + resource_count;
+                update city set arms = resource_count_client where id = client_id;
+            end if;
+            return true;
+        end if;
+    else
+        select money into resource_count_supplier from city where city.id = supplier_id;
+        resource_count_supplier = resource_count_supplier - resource_count;
+        if (resource_count_supplier >= 0) then
+            update city set money = resource_count_supplier where id = supplier_id;
+            if (client_id is not null) then
+                select money into resource_count_client from city where city.id = client_id;
+                resource_count_client = resource_count_client + resource_count;
+                update city set money = resource_count_client where id = client_id;
+            end if;
+            return true;
+        end if;
+    end if;
+    return false;
+
+end;
+$$ language plpgsql;
+
+create or replace function make_supply()
+    returns trigger as
+$$
+begin
+    if (tg_op = 'INSERT') then
+        if (not is_enough_res(new.supplier_id, new.client_id, new.resource_type, new.resource_count)) then
+            raise exception 'У поставщика недостаточно ресурсов';
+        end if;
+        return new;
+    elsif (tg_op = 'UPDATE') then
+        --update запрещен
+        raise exception 'Изменение данных запрещено';
+    elsif (tg_op = 'DELETE') then
+        if (not is_enough_res(new.client_id, new.supplier_id, new.resource_type, new.resource_count)) then
+            raise exception 'У клиента недостаточно ресурсов, чтобы вернуть их';
+        end if;
+        return old;
+    end if;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_delete_supply_tg
+    before insert or update or delete
+    on supply
+    for each row
+execute procedure make_supply();
+
+-------------------------------------------------------------------------------------
+---при совершении кражи  количество ресурсов у двух стран
+--не проверено
+
+create or replace function stole_resource()
+    returns trigger as
+$$
+declare
+    res_count integer;
+begin
+    if (tg_op = 'INSERT') then
+        if (not is_enough_res(new.injured_city_id, new.thief_city_id, new.resource_type, new.resource_count)) then
+            raise exception 'Нечего красть';
+        end if;
+        return new;
+    elsif (tg_op = 'UPDATE') then
+        --update запрещен
+        raise exception 'Изменение данных запрещено';
+    elsif (tg_op = 'DELETE') then
+        if (thief_city_id is not null and
+            not is_enough_res(new.thief_city_id, new.injured_city_id, new.resource_type, new.resource_count)) then
+            raise exception 'У клиента недостаточно ресурсов, чтобы вернуть их';
+        else
+            if (old.resource_type = 'food') then
+                select food into res_count from city where city.id = old.injured_city_id;
+                update city set food = (res_count + old.resource_count) where id = injured_city_id;
+            elsif (old.resource_type = 'material') then
+                select food into res_count from city where city.id = old.injured_city_id;
+                update city set materials = (res_count + old.resource_count) where id = injured_city_id;
+            elsif (old.resource_type = 'arms') then
+                select arms into res_count from city where city.id = old.injured_city_id;
+                update city set arms = (res_count + old.resource_count) where id = injured_city_id;
+            elsif (old.resource_type = 'money') then
+                select money into res_count from city where city.id = old.injured_city_id;
+                update city set money = (res_count + old.resource_count) where id = injured_city_id;
+            end if;
+        end if;
+        return old;
+    end if;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_delete_stolen_resource_tg
+    before insert or update or delete
+    on stolen_resource
+    for each row
+execute procedure stole_resource();
+---------------------------------------------------------------------------------
+--даты сражения должны входить в даты войны
+create or replace function check_dates_if_battle_changes()
+    returns trigger as
+$$
+declare
+    war_start_date     date;
+    war_finish_date    date;
+    battle_start_date  date;
+    battle_finish_date date;
+begin
+    battle_start_date = new.start_date;
+    battle_finish_date = new.finish_date;
+    select start_date into war_start_date from war where id = new.war_id;
+    select finish_date into war_finish_date from war where id = new.war_id;
+    if (war_start_date > battle_start_date) then
+        raise exception 'Начало битвы % не может быть раньше начала войны %', new.id, new.war_id;
+    end if;
+    if (war_finish_date < battle_finish_date) then
+        raise exception 'Война % не может закончиться раньше битвы %', new.war_id, new.id;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+
+create trigger insert_update_battle_tg
+    before insert or update
+    on battle
+    for each row
+execute procedure check_dates_if_battle_changes();
+---------------------------------------------------------------------------------------------------
+--даты сражения должны входить в даты войны
+create or replace function check_dates_if_war_changes()
+    returns trigger as
+$$
+declare
+    war_start_date     date;
+    war_finish_date    date;
+    battle_start_date  date;
+    battle_finish_date date;
+    index              integer;
+begin
+    war_start_date = new.start_date;
+    war_finish_date = new.finish_date;
+    for index in
+        --проверяем по всем битвам в этой войне
+        select id from battle where war_id = new.id
+        loop
+            select start_date into battle_start_date from battle where id = index;
+            select finish_date into battle_finish_date from war where id = index;
+            if (war_start_date > battle_start_date) then
+                raise exception 'Начало битвы % не может быть раньше начала войны', index;
+            end if;
+            if (war_finish_date < battle_finish_date) then
+                raise exception 'Война не может закончиться раньше битвы %', index;
+            end if;
+        end loop;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger insert_update_war_tg
+    before insert or update
+    on war
+    for each row
+execute procedure check_dates_if_war_changes();
