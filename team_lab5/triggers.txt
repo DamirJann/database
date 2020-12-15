@@ -696,30 +696,42 @@ execute procedure check_dates_if_war_changes();
 
 ------------------------------------------------------------------------------------------------------
 -- при добавлении новой профессии солдата, добавляется combat unit
-create or replace function add_new_combat_union()
+create or replace function add_new_combat_union_by_soldier()
     returns trigger as
 $$
 begin
     --- если добавленная профессия солдат -> добавляем запись в combat unit
     if (get_profession_by_id(new.profession_id) like 'soldier') then
-        insert into combat_unit (land_id, soldier_id, combat_dragon_id)
-                         values (get_land_id_by_citizen_id(new.citizen_id),
-                                 new.citizen_id,
-                                 get_dragon_of_citizen(new.citizen_id)
-                                );
+        -- если в таблице нет нужно записи по человека
+        if (get_dragon_of_citizen(new.citizen_id) is null) then
+            begin
+                insert into combat_unit (land_id, soldier_id, combat_dragon_id)
+                                 values (get_land_id_by_citizen_id(new.citizen_id),
+                                         new.citizen_id,
+                                         null
+                                        );
+            end;
+        else
+            begin
+                -- меняем в нужной записи null на soldier_id
+                update combat_unit
+                set citizen_id = new.citizen_id
+                where combat_unit.soldier_id = get_dragon_of_citizen(new.citizen_id);
+            end;
+        end if;
     end if;
     return null;
-
 end;
 $$ language plpgsql;
 
--- триггер на создание combat_unit при получении человеком професси so
+-- триггер на создание combat_unit при получении человеком профессии
 create trigger insert_citizen_profession_tg
     after insert
     on citizen_profession
     for each row
-execute procedure add_new_combat_union();
+execute procedure add_new_combat_union_by_soldier();
 ------------------------------------------------------------------------------------------------------
+
 
 
 
