@@ -1,3 +1,56 @@
+--- вспомогательные функции ---
+
+-- получаем id страны по пользователю
+create or replace function get_land_id_by_citizen_id(int)
+    returns integer as
+$$
+declare
+    result_land integer;
+begin
+    select city.land_id from citizen
+            join city on citizen.city_id = city.id
+            where citizen.id = $1
+    into result_land;
+
+    return result_land;
+end;
+$$ language plpgsql;
+
+-- проверяет, есть ли у человека профессия
+-- params: citizen_id, profession_name
+create or replace function is_has_profession(int, varchar)
+    returns boolean as
+$$
+begin
+    return exists(select * from citizen_profession
+                  join profession on citizen_profession.profession_id = profession.id
+                  WHERE profession.name LIKE $2 and citizen_profession.citizen_id = $1
+           );
+end;
+$$ language plpgsql;
+
+-- возвращает id дракона жителя или null
+create or replace function get_dragon_of_citizen(int)
+    returns int as
+$$
+begin
+    return (select dragon_id from citizen where  citizen.id = $1);
+end;
+$$ language plpgsql;
+-- проверка работы скрипта
+select * from get_dragon_of_citizen(5);
+
+-- возвращает имя профессии по id
+create or replace function get_profession_by_id(int)
+    returns varchar as
+$$
+begin
+    return (select profession.name from profession where  profession.id = $1);
+end;
+$$ language plpgsql;
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- при изменении количества ресурсов dec и inc в city_statistic должны изменяться данные в city
 -- не проверено
 create or replace function update_city_statistic()
@@ -640,3 +693,35 @@ create trigger insert_update_war_tg
     on war
     for each row
 execute procedure check_dates_if_war_changes();
+
+------------------------------------------------------------------------------------------------------
+-- при добавлении новой профессии солдата, добавляется combat unit
+create or replace function add_new_combat_union()
+    returns trigger as
+$$
+begin
+    --- если добавленная профессия солдат -> добавляем запись в combat unit
+    if (get_profession_by_id(new.profession_id) like 'soldier') then
+        insert into combat_unit (land_id, soldier_id, combat_dragon_id)
+                         values (get_land_id_by_citizen_id(new.citizen_id),
+                                 new.citizen_id,
+                                 get_dragon_of_citizen(new.citizen_id)
+                                );
+    end if;
+    return null;
+
+end;
+$$ language plpgsql;
+
+-- триггер на создание combat_unit при получении человеком професси so
+create trigger insert_citizen_profession_tg
+    after insert
+    on citizen_profession
+    for each row
+execute procedure add_new_combat_union();
+------------------------------------------------------------------------------------------------------
+
+
+
+
+
