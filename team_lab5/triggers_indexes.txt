@@ -1,3 +1,65 @@
+--- вспомогательные функции ---
+
+-- получаем id страны по пользователю
+create or replace function get_land_id_by_citizen_id(int)
+    returns integer as
+$$
+declare
+    result_land integer;
+begin
+    select city.land_id from citizen
+                                 join city on citizen.city_id = city.id
+    where citizen.id = $1
+    into result_land;
+
+    return result_land;
+end;
+$$ language plpgsql;
+
+-- проверяет, есть ли у человека профессия
+-- params: citizen_id, profession_name
+create or replace function is_has_profession(int, varchar)
+    returns boolean as
+$$
+begin
+    return exists(select * from citizen_profession
+                                    join profession on citizen_profession.profession_id = profession.id
+                  WHERE profession.name LIKE $2 and citizen_profession.citizen_id = $1
+        );
+end;
+$$ language plpgsql;
+
+-- возвращает id дракона жителя или null
+create or replace function get_dragon_of_citizen(int)
+    returns int as
+$$
+begin
+    return (select dragon_id from citizen where  citizen.id = $1);
+end;
+$$ language plpgsql;
+
+-- возвращает id хозяина дракона или null
+create or replace function get_citizen_of_dragon(int)
+    returns int as
+$$
+begin
+    return (select citizen.id from citizen where  citizen.dragon_id = $1);
+end;
+$$ language plpgsql;
+
+
+
+
+-- возвращает имя профессии по id
+create or replace function get_profession_by_id(int)
+    returns varchar as
+$$
+begin
+    return (select profession.name from profession where  profession.id = $1);
+end;
+$$ language plpgsql;
+
+
 -- при изменении количества ресурсов dec и inc в city_statistic должны изменяться данные в city
 create or replace function update_city_statistic()
     returns trigger as
@@ -245,6 +307,11 @@ begin
             select count(*) into land_dragon_count from dragon where index = land_id;
             update land set dragon_count = land_dragon_count where land.id = index;
         end loop;
+    -- при вставке дракона, обновляется таблица combat_unit
+    if (tg_op = 'INSERT') then
+        insert into combat_unit (land_id, soldier_id, combat_dragon_id) values
+                                (new.land_id, null, new.id);
+    end if;    
     return new;
 end;
 $$ language plpgsql;
@@ -292,6 +359,51 @@ begin
             raise exception 'Dragon and soldier are not connected';
         end if;
     end if;
+    
+    
+    -- при добавлении записи соединяем две разрозненные записи одного unit
+    if (tg_op = 'INSERT') then
+        declare
+            is_has_dragon_in_combat_unit boolean;
+            is_has_citizen_in_combat_unit boolean;
+        begin
+            --- было добавлено (dragon_id, null)
+            if (new.combat_dragon_id is not null) then
+                is_has_citizen_in_combat_unit = exists(select * from combat_unit
+                                                       where combat_unit.soldier_id = get_citizen_of_dragon(new.combat_dragon_id));
+                -- если в combat_unit есть владелец дракона, то удаляем эту запись и приписываем soldier к новой
+                raise notice '%', is_has_citizen_in_combat_unit;
+
+                if (is_has_citizen_in_combat_unit) then
+                    begin
+                        delete from combat_unit where combat_unit.soldier_id = get_citizen_of_dragon(new.combat_dragon_id);
+                        new.soldier_id = get_citizen_of_dragon(new.combat_dragon_id);
+                    end;
+                end if;
+             end if;
+
+            --- было добавлено (soldier_id, null)
+            if (new.soldier_id is not null) then
+
+                is_has_dragon_in_combat_unit = exists(select * from combat_unit
+                                                       where combat_unit.combat_dragon_id = get_dragon_of_citizen(new.soldier_id));
+                -- если в combat_unit есть дракона, то удаляем эту запись и приписываем soldier к новой
+                raise notice 'si dragon in combat_unit%', is_has_dragon_in_combat_unit;
+                if (is_has_dragon_in_combat_unit) then
+                    begin
+                        delete from combat_unit where combat_unit.combat_dragon_id = get_dragon_of_citizen(new.soldier_id);
+                        new.combat_dragon_id = get_dragon_of_citizen(new.soldier_id);
+                    end;
+                end if;
+            end if;
+        end;
+    end if;
+    
+    
+    
+    
+    
+    
     return new;
 end;
 $$ language plpgsql;
@@ -631,6 +743,34 @@ create trigger insert_update_war_tg
     on war
     for each row
 execute procedure check_dates_if_war_changes();
+
+
+-- при добавлении новой профессии солдата, добавляется combat unit
+create or replace function add_new_combat_union_by_soldier()
+    returns trigger as
+$$
+begin
+    --- если добавленная профессия солдат -> добавляем запись в combat unit
+    if (get_profession_by_id(new.profession_id) like 'soldier') then
+        -- если в таблице нет нужно записи по человека
+        insert into combat_unit (land_id, soldier_id, combat_dragon_id)
+                        values (get_land_id_by_citizen_id(new.citizen_id),
+                                new.citizen_id,
+                                null
+                               );
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+-- триггер на создание combat_unit при получении человеком профессии
+create trigger insert_citizen_profession_tg
+    after insert
+    on citizen_profession
+    for each row
+execute procedure add_new_combat_union_by_soldier();
+
+
 
 -------------------------------------------------------------------------
 -- индексы
