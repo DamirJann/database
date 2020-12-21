@@ -71,12 +71,12 @@ begin
         end loop;
     if (tg_op = 'DELETE') then
         return old;
-    else
-        ---если профессия не записана в citizen_profession, добавляем ее туда
-        perform * from citizen_profession where citizen_id = new.id and profession_id = new.current_profession_id;
-        if (not FOUND and new.current_profession_id is not null) then
-            insert into citizen_profession values (new.id, new.current_profession_id);
-        end if;
+--    else
+--        ---если профессия не записана в citizen_profession, добавляем ее туда
+--        perform * from citizen_profession where citizen_id = new.id and profession_id = new.current_profession_id;
+--        if (not FOUND and new.current_profession_id is not null) then
+--            insert into citizen_profession values (new.id, new.current_profession_id);
+--        end if;
     end if;
     return new;
 end;
