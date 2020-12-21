@@ -1,0 +1,99 @@
+alter table flock
+    drop constraint flock_teacher_id_cnstr;
+
+alter table flock
+    drop constraint flock_leader_id_cnstr;
+
+drop table offense;
+
+drop table stolen_dragon;
+
+drop table supply;
+
+drop table city_statistic;
+
+drop table election;
+
+drop table land_in_war;
+
+drop table land_in_union;
+
+drop table "union";
+
+drop table participant_in_battle;
+
+drop table agent_in_trip;
+
+drop table trust_relationship_report;
+
+drop table resource_report;
+
+drop table stolen_resource;
+
+drop table poll;
+
+drop table citizen_profession;
+
+drop table combat_unit_in_battle;
+
+drop table battle;
+
+drop table war;
+
+drop table combat_unit;
+
+drop table citizen;
+
+drop table dragon;
+
+drop table dragon_type;
+
+drop table flock;
+
+drop table city;
+
+drop table land;
+
+drop table profession;
+
+drop function update_city_statistic();
+
+drop function update_citizen_stat();
+
+drop function update_curr_prof_id();
+
+drop function check_only_one_jarl_and_konungr();
+
+drop function update_idea();
+
+drop function update_dragon_flock_id();
+
+drop function update_dragon_count_in_land();
+
+drop function check_soldier_and_dragon_id();
+
+drop function delete_null_row();
+
+drop function update_dragon_land_id();
+
+drop function check_percent_sum();
+
+drop function update_land_info();
+
+drop function make_supply();
+
+drop function stole_resource();
+
+drop function check_dates_if_battle_changes();
+
+drop function check_dates_if_war_changes();
+
+drop function update_idea_in_city(integer);
+
+drop function is_enough_res(integer, integer, resource_type_enum, integer)
+
+drop type resource_type_enum;
+
+drop type social_group_enum;
+
+drop type type_of_indicator_enum;
