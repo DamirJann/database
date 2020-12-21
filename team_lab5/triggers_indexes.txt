@@ -800,8 +800,3 @@ create index dragon_land_id_index
 
 create index city_statistic_city_id_date_index
     on city_statistic(city_id, date);
-
-
-
-
-
