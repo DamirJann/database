@@ -1,58 +1,4 @@
---- вспомогательные функции ---
-
--- получаем id страны по пользователю
-create or replace function get_land_id_by_citizen_id(int)
-    returns integer as
-$$
-declare
-    result_land integer;
-begin
-    select city.land_id from citizen
-            join city on citizen.city_id = city.id
-            where citizen.id = $1
-    into result_land;
-
-    return result_land;
-end;
-$$ language plpgsql;
-
--- проверяет, есть ли у человека профессия
--- params: citizen_id, profession_name
-create or replace function is_has_profession(int, varchar)
-    returns boolean as
-$$
-begin
-    return exists(select * from citizen_profession
-                  join profession on citizen_profession.profession_id = profession.id
-                  WHERE profession.name LIKE $2 and citizen_profession.citizen_id = $1
-           );
-end;
-$$ language plpgsql;
-
--- возвращает id дракона жителя или null
-create or replace function get_dragon_of_citizen(int)
-    returns int as
-$$
-begin
-    return (select dragon_id from citizen where  citizen.id = $1);
-end;
-$$ language plpgsql;
--- проверка работы скрипта
-select * from get_dragon_of_citizen(5);
-
--- возвращает имя профессии по id
-create or replace function get_profession_by_id(int)
-    returns varchar as
-$$
-begin
-    return (select profession.name from profession where  profession.id = $1);
-end;
-$$ language plpgsql;
-
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 -- при изменении количества ресурсов dec и inc в city_statistic должны изменяться данные в city
--- не проверено
 create or replace function update_city_statistic()
     returns trigger as
 $$
@@ -164,7 +110,6 @@ create trigger update_delete_citizen_profession_tg
 execute procedure update_curr_prof_id();
 -----------------------------------------------------------------------------------------
 -- в городе может быть только один (или ноль) ярл и в стране может быть только один конунг(или ноль)
--- добавляем данные в combat_unit()
 create or replace function check_only_one_jarl_and_konungr()
     returns trigger as
 $$
@@ -229,7 +174,6 @@ declare
     last_date date;
     last_idea integer;
 begin
-    ---можно сделать в один запрос?
     select max(date) into last_date from poll where city_id = changed_city_id;
     select idea into last_idea from poll where date = last_date and city_id = changed_city_id;
     update city set idea = last_idea where city.id = changed_city_id;
@@ -268,7 +212,6 @@ execute procedure update_idea();
 
 -----------------------------------------------------------------------------------------
 ---при добавлении стаи flock_id у лидера должен стать равным flock(id)
----проверить получше
 create or replace function update_dragon_flock_id()
     returns trigger as
 $$
@@ -306,7 +249,6 @@ begin
 end;
 $$ language plpgsql;
 
----можно ли сделать для одного statement?
 create trigger insert_update_delete_dragon_tg
     after insert or update or delete
     on dragon
@@ -435,7 +377,6 @@ create trigger insert_update_election_tg
 execute procedure check_percent_sum();
 -----------------------------------------------------------------------------------------------
 ---при изменении ресурсов на уровне города, ресурсы должны меняться на уровне страны
----проверить лучше
 create or replace function update_land_info()
     returns trigger as
 $$
@@ -488,8 +429,7 @@ create trigger insert_update_delete_city_tg
     for each row
 execute procedure update_land_info();
 --------------------------------------------------------------------------------------------------------------------
----при совершении сделки должно меняться количество ресурсов у двух стран
---не проверено
+---при совершении сделки должно меняться количество ресурсов у двух городов
 create or replace function is_enough_res(supplier_id integer, client_id integer, resource_type resource_type_enum,
                                          resource_count integer)
     returns boolean as
@@ -565,7 +505,7 @@ begin
         --update запрещен
         raise exception 'Изменение данных запрещено';
     elsif (tg_op = 'DELETE') then
-        if (not is_enough_res(new.client_id, new.supplier_id, new.resource_type, new.resource_count)) then
+        if (not is_enough_res(old.client_id, old.supplier_id, old.resource_type, old.resource_count)) then
             raise exception 'У клиента недостаточно ресурсов, чтобы вернуть их';
         end if;
         return old;
@@ -581,8 +521,6 @@ execute procedure make_supply();
 
 -------------------------------------------------------------------------------------
 ---при совершении кражи  количество ресурсов у двух стран
---не проверено
-
 create or replace function stole_resource()
     returns trigger as
 $$
@@ -598,22 +536,22 @@ begin
         --update запрещен
         raise exception 'Изменение данных запрещено';
     elsif (tg_op = 'DELETE') then
-        if (thief_city_id is not null and
-            not is_enough_res(new.thief_city_id, new.injured_city_id, new.resource_type, new.resource_count)) then
-            raise exception 'У клиента недостаточно ресурсов, чтобы вернуть их';
+        if (old.thief_city_id is not null and
+            not is_enough_res(old.thief_city_id, old.injured_city_id, old.resource_type, old.resource_count)) then
+            raise exception 'Недостаточно ресурсов, чтобы вернуть их';
         else
             if (old.resource_type = 'food') then
                 select food into res_count from city where city.id = old.injured_city_id;
-                update city set food = (res_count + old.resource_count) where id = injured_city_id;
+                update city set food = (res_count + old.resource_count) where id = old.injured_city_id;
             elsif (old.resource_type = 'material') then
                 select food into res_count from city where city.id = old.injured_city_id;
-                update city set materials = (res_count + old.resource_count) where id = injured_city_id;
+                update city set materials = (res_count + old.resource_count) where id = old.injured_city_id;
             elsif (old.resource_type = 'arms') then
                 select arms into res_count from city where city.id = old.injured_city_id;
-                update city set arms = (res_count + old.resource_count) where id = injured_city_id;
+                update city set arms = (res_count + old.resource_count) where id = old.injured_city_id;
             elsif (old.resource_type = 'money') then
                 select money into res_count from city where city.id = old.injured_city_id;
-                update city set money = (res_count + old.resource_count) where id = injured_city_id;
+                update city set money = (res_count + old.resource_count) where id = old.injured_city_id;
             end if;
         end if;
         return old;
@@ -694,44 +632,34 @@ create trigger insert_update_war_tg
     for each row
 execute procedure check_dates_if_war_changes();
 
-------------------------------------------------------------------------------------------------------
--- при добавлении новой профессии солдата, добавляется combat unit
-create or replace function add_new_combat_union_by_soldier()
-    returns trigger as
-$$
-begin
-    --- если добавленная профессия солдат -> добавляем запись в combat unit
-    if (get_profession_by_id(new.profession_id) like 'soldier') then
-        -- если в таблице нет нужно записи по человека
-        if (get_dragon_of_citizen(new.citizen_id) is null) then
-            begin
-                insert into combat_unit (land_id, soldier_id, combat_dragon_id)
-                                 values (get_land_id_by_citizen_id(new.citizen_id),
-                                         new.citizen_id,
-                                         null
-                                        );
-            end;
-        else
-            begin
-                -- меняем в нужной записи null на soldier_id
-                update combat_unit
-                set citizen_id = new.citizen_id
-                where combat_unit.soldier_id = get_dragon_of_citizen(new.citizen_id);
-            end;
-        end if;
-    end if;
-    return null;
-end;
-$$ language plpgsql;
+-------------------------------------------------------------------------
+-- индексы
+create index citizen_profession_profession_id
+             on citizen_profession(profession_id);
 
--- триггер на создание combat_unit при получении человеком профессии
-create trigger insert_citizen_profession_tg
-    after insert
-    on citizen_profession
-    for each row
-execute procedure add_new_combat_union_by_soldier();
-------------------------------------------------------------------------------------------------------
+create index citizen_profession_citizen_id
+    on citizen_profession(citizen_id);
 
+create index citizen_current_profession_id_index
+            on citizen(current_profession_id);
+
+create index citizen_current_city_id_index
+    on citizen(city_id);
+
+create index combat_unit_land_id_index
+    on combat_unit(land_id);
+
+create index dragon_flock_id_index
+    on dragon(flock_id);
+
+create index dragon_type_id_index
+    on dragon(type_id);
+
+create index dragon_land_id_index
+    on dragon(land_id);
+
+create index city_statistic_city_id_date_index
+    on city_statistic(city_id, date);
 
 
 
